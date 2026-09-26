@@ -20,13 +20,13 @@ jobs:
 
       - name: Restore Firebase configuration
         env:
-          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          if [ -z "$GOOGLE_SERVICES_JSON_BASE64" ]; then
-            echo "Firebase configuration secret is missing."
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "GOOGLE_SERVICES_JSON repository secret is missing. Add it under Settings > Secrets and variables > Actions, pasting the exact contents of your app/google-services.json file."
             exit 1
           fi
-          printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+          printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
 
       - name: Build debug APK
         run: bash ./gradlew --no-daemon assembleDebug
