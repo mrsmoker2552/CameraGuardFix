@@ -32,7 +32,31 @@ jobs:
           printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
 
       - name: Build debug APK
-        run: bash ./gradlew --no-daemon assembleDebug
+        run: |
+          set -o pipefail
+          bash ./gradlew --no-daemon assembleDebug 2>&1 | tee /tmp/gradle-build.log
+
+      # actions/checkout's log viewer/log-download redirects to Azure Blob Storage, which is
+      # not reachable from every delivery environment. On failure, commit the raw build log to
+      # a dedicated orphan branch too, so it can be fetched with plain git instead.
+      - name: Publish build log on failure
+        if: failure()
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          git fetch origin ci-logs:ci-logs 2>/dev/null || true
+          if git show-ref --verify --quiet refs/heads/ci-logs; then
+            git checkout ci-logs
+          else
+            git checkout --orphan ci-logs
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          mkdir -p logs
+          cp /tmp/gradle-build.log "logs/build-${SHORT_SHA}-run${GITHUB_RUN_NUMBER}.log"
+          git add logs
+          git commit -m "Build log ${SHORT_SHA} (run ${GITHUB_RUN_NUMBER}, failed)"
+          git push origin ci-logs
 
       - name: Upload APK
         if: success()
