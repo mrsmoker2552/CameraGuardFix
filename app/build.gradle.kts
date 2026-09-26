@@ -17,6 +17,23 @@ android {
         versionName = "1.6.10"
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // Fixed, checked-in debug key so every build - on any machine, and every CI run -
+            // is signed with the SAME certificate/SHA-1. Without this, Gradle's normal behaviour
+            // (auto-generating ~/.android/debug.keystore per machine if none exists) means a
+            // fresh GitHub Actions runner signs with a brand-new random key every time, which
+            // Google Sign-In then rejects with ApiException status 10 (DEVELOPER_ERROR) because
+            // that SHA-1 was never registered in the Firebase project. This keystore's SHA-1
+            // must be added once under Firebase Console > Project settings > your Android app >
+            // Add fingerprint (see the repo README / the change report delivered with this fix).
+            storeFile = file("ci-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

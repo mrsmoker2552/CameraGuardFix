@@ -13,6 +13,10 @@ local.properties
 *.keystore
 *.p12
 *.pem
+# Except: the fixed, checked-in debug key used by CI and local builds alike so every
+# build shares one SHA-1 (see app/build.gradle.kts signingConfigs.debug). This is a
+# debug-only key with the well-known "android"/"android" password - never a release key.
+!app/ci-debug.keystore
 
 # Local secrets
 .env
