@@ -1,0 +1,94 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['displayName', 'communityEnabled'])",
+        "displayName": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
+        "communityEnabled": { ".validate": "newData.isBoolean()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "presence": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('communityEnabled').val() == true",
+      ".indexOn": ["cell"],
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "!newData.exists() || newData.hasChildren(['displayName','latitude','longitude','heading','speedKmh','cell','lastSeen'])",
+        "displayName": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
+        "latitude": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
+        "longitude": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+        "heading": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 360" },
+        "speedKmh": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 300" },
+        "moving": { ".validate": "newData.isBoolean()" },
+        "cell": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 32" },
+        "lastSeen": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "admins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+    "contributors": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+    "masterCameras": {
+      ".read": "auth != null",
+      "$cameraId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && root.child('contributors').child(auth.uid).val() === true && newData.child('status').val() === 'PENDING' && newData.child('createdBy').val() === auth.uid && newData.child('updatedBy').val() === auth.uid))"
+      }
+    },
+    "osmReferenceCameras": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "roadReports": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('communityEnabled').val() == true",
+      "$reportId": {
+        ".write": "auth != null && newData.child('reporterUid').val() === auth.uid",
+        ".validate": "!newData.exists() || newData.hasChildren(['type','latitude','longitude','roadName','reporterUid','createdAt'])",
+        "type": { ".validate": "newData.isString() && (newData.val() == 'ROAD_CLOSURE' || newData.val() == 'CRASH' || newData.val() == 'CONGESTION' || newData.val() == 'POLICE' || newData.val() == 'ROAD_WORKS' || newData.val() == 'LANE_CLOSURE' || newData.val() == 'OBJECT_ON_ROAD')" },
+        "latitude": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
+        "longitude": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+        "roadName": { ".validate": "newData.isString() && newData.val().length <= 120" },
+        "reporterUid": { ".validate": "newData.isString() && newData.val() === auth.uid" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "privatePresence": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "!newData.exists() || newData.hasChildren(['latitude','longitude','lastSeen'])",
+        "latitude": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
+        "longitude": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+        "lastSeen": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    },
+    "sosAlerts": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('communityEnabled').val() == true",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && (!newData.exists() || root.child('users').child(auth.uid).child('communityEnabled').val() == true)",
+        ".validate": "!newData.exists() || (newData.hasChildren(['displayName','latitude','longitude','createdAt','expiresAt','active']) && newData.child('createdAt').val() >= now - 60000 && newData.child('createdAt').val() <= now + 30000 && newData.child('expiresAt').val() > newData.child('createdAt').val() && newData.child('expiresAt').val() <= newData.child('createdAt').val() + 900000)",
+        "displayName": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
+        "latitude": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
+        "longitude": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "expiresAt": { ".validate": "newData.isNumber()" },
+        "active": { ".validate": "newData.isBoolean() && newData.val() == true" },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

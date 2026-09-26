@@ -1,0 +1,935 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#040521"><title>CameraGuard · 3D Map HUD</title><style>
+*{box-sizing:border-box}html,body{height:100%;width:100%;margin:0;background:#040521;color:#f7faff;font-family:Inter,Roboto,'Arial',sans-serif}button{font:inherit;color:inherit;cursor:pointer}.hud{position:relative;width:100%;max-width:550px;height:100svh;min-height:620px;margin:auto;overflow:hidden;background:radial-gradient(ellipse at 52% 52%,#0D2D6B 0%,#081D56 42%,#06143E 75%,#040521 100%);isolation:isolate}.hud:before{content:'';position:absolute;inset:0;pointer-events:none;border:1px solid #264B86;border-radius:16px;z-index:12}.scene{position:absolute;inset:0;width:100%;height:100%;z-index:0}.scene .road{fill:url(#road)}.scene .blue{fill:url(#blue)}.header{position:absolute;top:2.5%;left:4.5%;right:4.5%;display:flex;align-items:center;gap:11px;z-index:5}.shield{width:42px;height:50px;flex:none;filter:drop-shadow(0 0 12px #0d9ed03b)}.brand{min-width:0;flex:1}.brand strong{font-size:clamp(19px,5.2vw,28px);letter-spacing:-.7px;white-space:nowrap}.brand strong span{color:#62AAE5}.brand small{display:block;color:#B6C9E0;font-size:clamp(8px,1.9vw,10px);letter-spacing:1.65px;margin-top:5px;white-space:nowrap}.live{display:flex;align-items:center;gap:7px;color:#d6e1ed;font-size:clamp(11px,2.7vw,14px);white-space:nowrap}.dot{width:9px;height:9px;border-radius:50%;background:#11d99e;box-shadow:0 0 12px #11d99e}.hudbtn{border:1px solid #62AAE5;background:#102535a6;border-radius:12px;padding:11px 12px;font-weight:750;box-shadow:0 0 14px #0088bd24}.minimap{position:absolute;left:2%;top:10.5%;width:60%;height:24%;z-index:2;overflow:visible;mask-image:linear-gradient(to bottom,#000 0%,#000 76%,transparent 100%)}.minimap svg{width:100%;height:100%;overflow:visible}.compass{position:absolute;top:11.3%;left:49%;width:54px;height:54px;border:1px solid #6678898a;border-radius:50%;background:#111e2ab0;display:grid;place-items:center;z-index:3;box-shadow:0 0 0 4px #15253355}.compass:before{content:'▲';position:absolute;top:5px;color:#ff5466;font-size:17px}.compass span{padding-top:19px;font-size:15px;font-weight:800}.roadname{position:absolute;left:5%;top:30.1%;z-index:4}.roadname small{display:block;color:#B6C9E0;font-size:11px;font-weight:700;letter-spacing:.7px}.roadname strong{display:block;font-size:clamp(16px,4.4vw,23px);margin-top:6px}.speed,.heading{position:absolute;z-index:4;top:39%;text-shadow:0 3px 12px #0008}.speed{left:5%}.heading{right:5%;text-align:right}.speed strong,.heading strong{display:block;font-size:clamp(48px,12vw,78px);letter-spacing:-3px;line-height:1;font-weight:760}.speed span,.heading span{display:block;color:#c3d0dc;font-size:clamp(13px,3.5vw,18px);margin-top:10px}.heading em{display:block;font-style:normal;font-size:clamp(13px,3.4vw,18px);margin-top:4px;color:#d8e4ef}.scooter{position:absolute;width:clamp(144px,35%,205px);height:29%;left:50%;top:52%;transform:translateX(-50%);z-index:4;filter:drop-shadow(0 16px 14px #000b)}.scooter svg{width:100%;height:100%}.warning{position:absolute;left:4%;top:76%;width:min(45%,235px);min-width:170px;z-index:6;background:linear-gradient(125deg,#10283bbf,#12273bd9);border:1px solid #3b617144;border-radius:16px;padding:11px 12px 12px;box-shadow:0 8px 30px #0004;backdrop-filter:blur(9px)}.warning .main{display:flex;gap:11px;align-items:center}.camicon{width:43px;height:43px;border:4px solid #e54854;border-radius:50%;background:white;display:grid;place-items:center;flex:none}.camicon svg{width:25px;height:25px}.warning small{display:block;color:#d4e0ec;font-size:clamp(10px,2.5vw,13px);font-weight:700;white-space:nowrap}.warning strong{display:block;font-size:clamp(22px,6vw,32px);margin-top:2px;white-space:nowrap}.track{height:4px;border-radius:8px;background:#33536b;margin-top:12px;overflow:hidden}.track i{display:block;width:48%;height:100%;border-radius:8px;background:linear-gradient(90deg,#62AAE5,#8EC7F0)}.tabs{position:absolute;bottom:2.3%;left:3%;right:3%;height:10%;min-height:68px;max-height:88px;display:flex;align-items:stretch;justify-content:space-around;z-index:8;border-radius:23px;background:linear-gradient(180deg,#0D2D6Bdb,#081D56ee);border:1px solid #264B8644;box-shadow:0 -12px 35px #0005;backdrop-filter:blur(12px);padding:7px}.tab{flex:1;min-width:0;background:none;border:0;border-radius:17px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#B6C9E0;font-size:clamp(10px,2.6vw,13px)}.tab.active{color:#F59A2F;background:linear-gradient(150deg,#3e3a31ad,#2c343b60)}.tab svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.tab.active svg{filter:drop-shadow(0 0 7px #F59A2F55)}.modal{display:none;position:absolute;inset:auto 6% 15% 6%;padding:18px;background:#112639f5;border:1px solid #35708c;border-radius:18px;z-index:20;box-shadow:0 20px 80px #000b}.modal.show{display:block}.modal button{float:right;background:#23455b;border:0;border-radius:8px;padding:5px 10px}.modal p{color:#b9cbd8;font-size:13px;line-height:1.5}@media(max-width:370px){.header{gap:7px}.shield{width:32px;height:40px}.hudbtn{padding:9px}.live{font-size:10px}.brand strong{font-size:18px}.brand small{letter-spacing:.7px}.warning{min-width:156px;padding:9px}.camicon{width:36px;height:36px}}@media(max-height:700px){.minimap{top:11%;height:22%}.roadname{top:29%}.speed,.heading{top:39%}.scooter{top:52%;height:25%}.warning{top:75%}.tabs{bottom:1.5%}}
+@media(prefers-reduced-motion:no-preference){#scooterModel{animation:ride 2.5s ease-in-out infinite}@keyframes ride{0%,100%{translate:0 0}50%{translate:0 -2px}}} .scooter svg{filter:drop-shadow(0 9px 9px #0009)}
+ .scooter{width:clamp(190px,58%,320px);height:37%;top:46%;filter:none;overflow:visible;pointer-events:none}.scooter canvas{display:block;width:100%;height:100%;filter:drop-shadow(0 15px 16px #0008)}.render-status{position:absolute;left:0;right:0;top:45%;font-size:12px;text-align:center;color:#9eddf9}.warning{top:76%}@media(max-height:700px){.scooter{top:47%;height:32%}} 
+.scene{display:none}#road3d{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block;pointer-events:none}#mini3d{position:absolute;left:3%;top:10.8%;width:59%;height:23%;z-index:2;pointer-events:none;mask-image:linear-gradient(#000 0%,#000 72%,transparent 100%);border-radius:16px}.minimap{display:none}.scooter{display:none;z-index:5;top:45%;height:40%;width:clamp(210px,65%,350px)}.roadname,.speed,.heading{z-index:6}.warning{z-index:7}.hud:after{content:'';position:absolute;inset:30% 0 10%;pointer-events:none;background:linear-gradient(90deg,#04052160,transparent 32%,transparent 68%,#04052160);z-index:1}@media(max-height:700px){.scooter{top:46%;height:35%}#mini3d{height:21%}}
+#mini3d{mask-image:radial-gradient(circle at center,#000 65%,rgba(0,0,0,.75) 81%,transparent 99%);-webkit-mask-image:radial-gradient(circle at center,#000 65%,rgba(0,0,0,.75) 81%,transparent 99%);background:#081D56;border:1px solid #264B86;border-radius:50%;aspect-ratio:1/1;height:auto;width:min(43vw,170px);box-shadow:0 8px 30px #0009;pointer-events:none}.mini-tools{position:absolute;left:4%;top:11.5%;width:56%;height:21%;z-index:4;pointer-events:none;color:#e0f4ff;font-size:9px;font-weight:800;letter-spacing:.7px}.mini-tools span{position:absolute;left:6px;top:5px;background:#081D56dc;padding:4px 5px;border-radius:5px}.mini-tools button{pointer-events:auto;position:absolute;right:3px;top:3px;background:#12376Fe8;border:1px solid #62AAE5;border-radius:6px;padding:4px 6px;font-size:9px;font-weight:800}.mini-tools small{position:absolute;bottom:0;left:5px;background:#081D56dc;padding:4px;border-radius:5px;font-size:8px} </style><style id="mini-map-premium-fade">
+/* Map-only opacity: rider arrow stays fully opaque on its independent canvas. */
+#mini3d{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden;isolation:isolate;pointer-events:none!important;mask-image:none!important;-webkit-mask-image:none!important}
+#mini3d canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:transparent}
+#miniMapLayer{opacity:1;mask-image:none;-webkit-mask-image:none}
+#miniArrowLayer{opacity:1;mask-image:none!important;-webkit-mask-image:none!important;filter:drop-shadow(0 0 5px #009dff80)}
+.mini-tools span,.mini-tools small{background:#081D5670!important;backdrop-filter:blur(5px)}
+</style><style id="speed-heading-refresh">
+/* Dedicated responsive speed dial and heading readout below HUD control. */
+.speed{left:4%;top:38%;width:clamp(112px,32%,168px);height:clamp(112px,32vw,168px);max-height:168px;display:grid;place-items:center;text-align:center;filter:drop-shadow(0 12px 20px #0009)}
+.speed-dial{position:relative;width:100%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 48% 43%,#12376F 0%,#081D56 55%,#040521 73%);border:1px solid #264B8666;box-shadow:inset 0 0 18px #1cbcff15,0 0 0 4px #0c20308a}
+.speed-dial svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;transform:rotate(135deg)}
+.speed-dial .dial-track{fill:none;stroke:#264B86;stroke-width:7;stroke-linecap:round;stroke-dasharray:213 283}
+.speed-dial .dial-progress{fill:none;stroke:#62AAE5;stroke-width:7;stroke-linecap:round;stroke-dasharray:112 283;filter:drop-shadow(0 0 4px #62AAE5)}
+.speed-dial .dial-inner{fill:none;stroke:#5d859744;stroke-width:1.2}
+.speed-readout{position:relative;display:flex;flex-direction:column;align-items:center;gap:0;padding-top:5px}
+.speed .speed-readout strong{font-size:clamp(34px,9vw,49px);letter-spacing:-2px;line-height:1;font-variant-numeric:tabular-nums}
+.speed .speed-readout span{margin-top:4px;font-size:clamp(10px,2.7vw,13px);letter-spacing:1px;color:#C8DDF0;font-weight:750}
+.speed .speed-readout small{margin-top:6px;font-size:8px;letter-spacing:1.5px;color:#6f9caf;font-weight:800}
+.heading{top:calc(2.5% + 64px);right:4.5%;left:auto;width:clamp(92px,26%,135px);text-align:right;padding:10px 12px 9px;border:1px solid #47748b55;border-radius:13px;background:linear-gradient(125deg,#0b2133dd,#122a3bc4);box-shadow:0 8px 22px #0004;backdrop-filter:blur(8px)}
+.heading .heading-label{font-size:9px;letter-spacing:1.6px;font-weight:800;color:#9cc5d9}
+.heading strong{font-size:clamp(24px,6vw,33px);letter-spacing:-1px;margin-top:4px;line-height:1.1;font-variant-numeric:tabular-nums}
+.heading span{display:none}.heading em{font-size:11px;margin-top:3px;color:#42d0ff;font-weight:800}
+@media(max-width:370px){.heading{top:calc(2.5% + 58px);padding:8px 10px}.speed{top:39%;width:108px;height:108px}}
+@media(max-height:700px){.heading{top:calc(2.5% + 56px)}.speed{top:37%;width:105px;height:105px}}
+.hud{max-width:none!important;height:100dvh!important;min-height:0!important;border-radius:0!important}.hud:before{display:none!important}.tabs,.hudbtn,.heading{display:none!important}.warning{display:none}.render-status{font-size:12px}</style><style id="android-locked-v12-viewport">html,body{width:100%;height:100%;min-height:100%;margin:0;overflow:hidden}.hud{width:100%!important;height:100dvh!important;min-height:0!important;max-height:none!important;margin:0!important;overflow:hidden}</style><style id="android-webview-paint-fix">html,body{display:block!important;visibility:visible!important;opacity:1!important;background:#040521!important}.hud{display:block!important;visibility:visible!important;opacity:1!important;contain:none!important}.hud>.header,.hud>.roadname,.hud>.speed,.hud>.heading{visibility:visible!important;opacity:1!important}</style><style id="android-hud-viewport-anchor">html,body{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;min-height:100%!important;margin:0!important;padding:0!important;overflow:hidden!important}body>.hud{position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:0!important;inset:0!important;transform:none!important;margin:0!important;width:100%!important;max-width:none!important;min-height:0!important;overflow:hidden!important}</style><style id="android-v12-layout-alignment">
+/* Keep the original Three.js scene; align DOM instruments within the Android HUD viewport. */
+.hud>.heading{display:block!important;visibility:visible!important;opacity:1!important;top:12%!important;right:4.5%!important;width:26%!important;min-width:104px;max-width:150px;text-align:center!important;padding:15px 9px!important;background:#1a3145ed!important;border:1px solid #466a83!important;border-radius:15px!important;z-index:8!important}
+.heading .heading-label{font-size:10px!important;letter-spacing:1.3px}.heading strong{font-size:clamp(29px,7vw,43px)!important}.heading em{font-size:11px!important;line-height:1.3!important;overflow-wrap:anywhere}
+#mini3d{left:3%!important;top:11.7%!important;width:59%!important;height:22%!important}
+.mini-tools{left:4%!important;top:12%!important;width:56%!important;height:21%!important}.mini-tools small{display:none!important}
+.roadname{left:5%!important;top:33.7%!important;z-index:8!important}.roadname small{font-size:10px!important;letter-spacing:.9px}.roadname strong{margin-top:5px!important;font-size:clamp(17px,4.4vw,23px)!important}
+.hud>.speed{top:42%!important;left:4%!important;width:clamp(135px,34vw,178px)!important;height:auto!important;max-height:none!important;z-index:8!important}
+.speed-dial{box-shadow:inset 0 0 18px #1cbcff15,0 0 0 5px #0c20308a!important}
+.speed .speed-readout strong{font-size:clamp(40px,10vw,54px)!important}
+@media(max-height:720px){.hud>.speed{top:42%!important;width:clamp(122px,32vw,156px)!important}.roadname{top:34%!important}}
+</style><style id="cg-premium-live-warning">
+/* The native bottom navigation is outside this WebView; keep the warning above it. */
+.hud>.warning{display:none;position:absolute!important;top:auto!important;bottom:2%!important;left:2%!important;right:2%!important;width:96%!important;min-width:0!important;max-width:none!important;z-index:30!important;padding:14px 16px!important;background:linear-gradient(115deg,#1b1727,#14243a 65%,#12283a)!important;border:2px solid #fa5a69!important;border-radius:20px!important;box-shadow:0 10px 32px #000b,0 0 22px #fa455733!important;backdrop-filter:none!important;animation:cgHeart 1.25s ease-in-out infinite!important}
+.hud>.warning .main{justify-content:space-between}.hud>.warning .main>div:last-child{flex:1;min-width:0}.hud>.warning .main small{color:#ff8c98;font-size:11px;letter-spacing:1.2px}.hud>.warning .main strong{font-size:clamp(25px,7vw,37px);color:#fff}.hud>.warning .camicon{width:46px;height:46px;box-shadow:0 0 0 5px #ff526522}.hud>.warning .track{background:#463345}.hud>.warning .track i{background:linear-gradient(90deg,#ff4e68,#ffad74)}
+@keyframes cgHeart{0%,100%{box-shadow:0 10px 32px #000b,0 0 12px #fa455722;transform:scale(1)}15%{box-shadow:0 10px 32px #000b,0 0 24px #fa455755;transform:scale(1.009)}30%{transform:scale(1)}44%{transform:scale(1.006)}60%{transform:scale(1)}}
+#mini3d.cg-warning-active #miniArrowLayer{filter:drop-shadow(0 0 7px #ff405b);animation:cgArrowPulse 1.05s ease-in-out infinite}
+@keyframes cgArrowPulse{0%,100%{opacity:1}50%{opacity:.65}}
+@media(prefers-reduced-motion:reduce){.hud>.warning,#mini3d.cg-warning-active #miniArrowLayer{animation:none!important}}
+</style><style id="cg-hud-smokers-wordmark">
+/* Header-only brand change: preserve the locked HUD v12 geometry and controls. */
+.hud>.header .cg-smokers-brand strong{display:block;font-size:clamp(17px,4.9vw,25px);font-weight:850;letter-spacing:-.6px;white-space:nowrap;color:#f2f8ff;text-shadow:0 2px 10px #0007}
+.hud>.header .cg-smokers-brand strong span{color:#38c9ff}
+.hud>.header .cg-smokers-brand small{font-size:clamp(7px,1.8vw,9px);letter-spacing:1.15px}
+@media(max-width:370px){.hud>.header .cg-smokers-brand strong{font-size:17px}.hud>.header .cg-smokers-brand small{letter-spacing:.55px}}
+</style><style id="cg-gps-diagnostic-style">
+#cgGpsDebugToggle{position:absolute;top:34%;right:4%;z-index:50;background:#0b2635ee;color:#9ce1ff;border:1px solid #3489af;border-radius:11px;font-size:11px;font-weight:800;padding:9px 10px;box-shadow:0 5px 18px #0009;letter-spacing:.4px}
+#cgGpsDebugPanel{position:absolute;left:4%;right:4%;bottom:4%;max-height:69%;overflow:auto;z-index:60;background:#0b1c2bf7;border:1px solid #58a9ce;border-radius:16px;padding:13px;color:#e5f5ff;font-size:11px;box-shadow:0 20px 60px #000d;touch-action:pan-y}
+#cgGpsDebugPanel[hidden]{display:none!important}
+#cgGpsDebugPanel .cg-gps-title{display:flex;justify-content:space-between;align-items:center;gap:9px;font-size:14px;font-weight:800;margin-bottom:8px}
+#cgGpsDebugPanel button{background:#17384c;border:1px solid #4a839e;border-radius:8px;padding:9px;color:#e5f5ff;font-weight:650;font-size:11px}
+#cgGpsDebugPanel .cg-gps-actions{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+#cgGpsDebugPanel pre{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;color:#b8d9e9;max-height:200px;overflow:auto}
+#cgGpsDebugPanel .cg-gps-privacy{color:#ffda8d;line-height:1.4}
+</style><style id="cg-steps10-22-style">
+#mini3d{position:absolute!important;left:3%!important;top:10.8%!important;width:min(43vw,170px)!important;height:auto!important;aspect-ratio:1!important;border-radius:50%!important;overflow:hidden!important;border:1px solid #5a8694!important;mask-image:radial-gradient(circle,#000 67%,rgba(0,0,0,.83) 83%,transparent 99%)!important;-webkit-mask-image:radial-gradient(circle,#000 67%,rgba(0,0,0,.83) 83%,transparent 99%)!important;box-shadow:0 9px 25px #0008!important}
+#mini3d canvas{position:absolute;inset:0;width:100%;height:100%}.mini-tools{top:calc(10.8% + min(43vw,170px))!important;left:4%!important;width:auto!important;height:22px!important}.mini-tools small{position:static!important}.mini-tools span{display:none!important}
+.cg-hud-footer-logo{position:absolute;left:12px;bottom:12px;z-index:19;display:flex;align-items:center;gap:5px;pointer-events:none;font-family:Inter,Roboto,Arial,sans-serif;text-shadow:0 2px 8px #000;line-height:1.02}.cg-native-warning-active .cg-hud-footer-logo{bottom:114px}.cg-hud-footer-logo strong{display:block;font-size:12px;font-style:italic;color:#f6faff}.cg-hud-footer-logo small{display:block;font-size:7px;letter-spacing:1.1px;color:#40caff;font-weight:800}.cg-hud-footer-shield{position:relative;display:grid;place-items:center;width:25px;height:25px;color:#62AAE5;font-size:26px;animation:cgBrandTwist 5s ease-in-out infinite}@keyframes cgBrandTwist{0%,84%,100%{transform:rotateY(0deg)}89%{transform:rotateY(75deg)}95%{transform:rotateY(-12deg)}}@media(prefers-reduced-motion:reduce){.cg-hud-footer-shield{animation:none}}
+</style><style id="cg-mini-map-final-2026">
+/* Borderless aerial minimap: background fades independently of the opaque rider arrow. */
+.hud #mini3d{position:absolute!important;left:3%!important;top:10.8%!important;width:min(59vw,260px)!important;height:clamp(125px,23vh,185px)!important;aspect-ratio:auto!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;outline:0!important;overflow:hidden!important;mask-image:none!important;-webkit-mask-image:none!important;isolation:isolate!important;pointer-events:none!important}
+.hud #mini3d #miniMapLayer{opacity:.79!important;mask-image:radial-gradient(ellipse 74% 72% at 50% 48%,#000 49%,rgba(0,0,0,.84) 73%,transparent 100%)!important;-webkit-mask-image:radial-gradient(ellipse 74% 72% at 50% 48%,#000 49%,rgba(0,0,0,.84) 73%,transparent 100%)!important}
+.hud #mini3d #miniArrowLayer{opacity:1!important;mask-image:none!important;-webkit-mask-image:none!important;filter:drop-shadow(0 0 5px #009dff90)!important}
+.hud .mini-tools{position:absolute!important;left:3%!important;top:calc(10.8% + clamp(125px,23vh,185px))!important;height:30px!important;width:min(59vw,260px)!important;z-index:9!important;pointer-events:none!important}
+.hud .mini-tools #routeToggle{position:absolute!important;top:0!important;right:3px!important;display:block!important;pointer-events:auto!important;background:#12364bea!important;border:1px solid #3895b6!important;color:#c3edff!important;border-radius:7px!important;padding:5px 9px!important;font-size:10px!important;letter-spacing:.5px!important}
+.hud .mini-tools #routeToggle[aria-pressed="false"]{color:#a2aab2!important;background:#16232bdc!important;border-color:#566270!important}
+.hud .mini-tools small,.hud .mini-tools span,.hud .compass{display:none!important}
+@media(max-height:540px){.hud #mini3d{height:clamp(95px,26vh,145px)!important}.hud .mini-tools{top:calc(10.8% + clamp(95px,26vh,145px))!important}}
+</style><style id="cg-theme-and-minimap-glow-final">
+/* App-selected HUD theme. Safety/warning colours remain semantic. */
+html[data-theme="light"] body,html[data-theme="light"] .hud{background:#eef4f8!important;color:#10202d!important}
+html[data-theme="light"] .hud{background:radial-gradient(ellipse at 52% 52%,#ffffff 0%,#edf4f8 52%,#e3ebf1 100%)!important}
+html[data-theme="light"] .hud:before{border-color:#b9c8d4!important}
+html[data-theme="light"] .brand small,html[data-theme="light"] .roadname small,html[data-theme="light"] .speed span,html[data-theme="light"] .heading span,html[data-theme="light"] .heading em{color:#445969!important}
+html[data-theme="light"] .brand strong,html[data-theme="light"] .roadname strong,html[data-theme="light"] .speed strong,html[data-theme="light"] .heading strong,html[data-theme="light"] .live{color:#10202d!important;text-shadow:none!important}
+html[data-theme="light"] .hudbtn,html[data-theme="light"] .mini-tools #routeToggle{background:#ffffffd9!important;color:#16465f!important;border-color:#6eb6d1!important;box-shadow:0 5px 18px #30566b22!important}
+html[data-theme="light"] .tabs{background:linear-gradient(180deg,#ffffffeb,#e8f0f5f2)!important;border-color:#b7c7d3!important;box-shadow:0 -10px 28px #405b6c22!important}
+html[data-theme="light"] .tab{color:#536879!important} html[data-theme="light"] .tab.active{color:#7a5412!important;background:#e8edf0!important}
+html[data-theme="light"] .cg-hud-footer-logo{filter:drop-shadow(0 1px 5px #fff)} html[data-theme="light"] .cg-hud-footer-logo strong{color:#172937!important;text-shadow:none!important}
+/* Mini-map is deliberately borderless. Glow and road fade are painted in canvas so they track real 1 km distance. */
+.hud #mini3d #miniMapLayer{opacity:1!important;mask-image:none!important;-webkit-mask-image:none!important}
+</style>
+<style id="camera-guard-signature-palette">
+:root{--cg-midnight:#040521;--cg-navy:#081D56;--cg-sky:#62AAE5;--cg-amber:#F59A2F;--cg-text:#F7FAFF;--cg-muted:#B6C9E0;--cg-border:#264B86}
+html,body{background:var(--cg-midnight);color:var(--cg-text)}
+.hud{background:radial-gradient(ellipse at 52% 54%,#0D2D6B 0%,#081D56 39%,#06143E 70%,#040521 100%)}
+.hud:before{border-color:#264B86}
+.brand strong span{color:var(--cg-sky)} .brand small,.roadname small{color:var(--cg-muted)}
+.hudbtn,#routeToggle{border-color:var(--cg-sky)!important;background:#12376FE8!important;color:#F7FAFF!important}
+.speed-dial{background:radial-gradient(circle at 48% 43%,#12376F 0%,#081D56 56%,#040521 78%);border-color:#264B86}
+.speed-dial .dial-progress{stroke:var(--cg-sky);filter:drop-shadow(0 0 5px #62AAE5)}
+.heading,.speed{color:var(--cg-text)}
+.warning{background:linear-gradient(135deg,#081D56E8,#0D2D6BF2);border-color:#264B86}
+.track{background:#18396E}.track i{background:linear-gradient(90deg,#62AAE5,#F59A2F)}
+.mini-tools span,.mini-tools small{background:#04052199!important;color:#F7FAFF}
+.cg-hud-footer-logo{color:#F7FAFF}
+</style>
+<style id="cg-final-hud-fixes">
+/* Final HUD cleanup: diagnostics stay in source/logs, not in the rider UI. */
+#cgGpsDebugToggle,#cgGpsDebugPanel{display:none!important}
+/* Mini-map must remain visibly distinct even before all OSM ways arrive. */
+.hud #mini3d{background:radial-gradient(ellipse at center,rgba(8,29,86,.58) 0%,rgba(8,29,86,.34) 58%,rgba(4,5,33,0) 100%)!important}
+.hud #mini3d #miniMapLayer{opacity:1!important;filter:drop-shadow(0 0 4px rgba(98,170,229,.28))!important}
+.hud #mini3d #miniArrowLayer{opacity:1!important;filter:drop-shadow(0 0 7px rgba(98,170,229,.85))!important}
+</style><style id="cg-native-minimap-handoff">
+/* The HUD mini-map is now native MapLibre (Compose overlay), using the same vector source as Main Map. */
+#mini3d,.mini-tools{display:none!important}
+</style></head><body><main class="hud" aria-label="CameraGuard HUD visual demo"><svg class="scene" viewBox="0 0 390 850" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="road" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#101e2b"/><stop offset=".45" stop-color="#1b3043"/><stop offset="1" stop-color="#263d51"/></linearGradient><linearGradient id="blue" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#081D56"/><stop offset=".28" stop-color="#2D7DBA"/><stop offset=".85" stop-color="#0bb4fa"/><stop offset="1" stop-color="#62AAE5"/></linearGradient><linearGradient id="fade" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#040521" stop-opacity="0"/><stop offset="1" stop-color="#040521" stop-opacity=".5"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="8"/></filter></defs><path class="road" d="M207 260 L183 260 -95 850 485 850Z"/><path d="M207 260 L-95 850 M183 260 L485 850" fill="none" stroke="#8195a6" stroke-opacity=".36" stroke-width="2"/><path d="M206 260 L-25 850 M184 260 L415 850" fill="none" stroke="#91a2af" stroke-opacity=".19" stroke-width="1"/><path d="M195 265 L159 850 L241 850Z" fill="#62AAE5" opacity=".35" filter="url(#glow)"/><path class="blue" d="M195 265 L158 850 L242 850Z"/><path d="M195 265 L158 850 L242 850Z" fill="url(#fade)" opacity=".35"/><path d="M0 850 H390" stroke="#152435" stroke-width="12"/></svg>
+<header class="header"><svg class="shield" viewBox="0 0 45 55"><path fill="#62AAE5" d="M22 1 43 10v18c0 13-8 21-21 27C9 49 1 41 1 28V10Z"/><path fill="#9ACAF0" d="M22 6 37 13v15c0 10-6 17-15 22Z"/></svg><div class="brand cg-smokers-brand" aria-label="Smoker’s Map"><strong>Smoker’s <span>Map</span></strong><small>DRIVE SAFE · STAY ALERT</small></div><div class="live"><i class="dot"></i>GPS Live</div></header>
+<button id="cgGpsDebugToggle" type="button">GPS DEBUG</button>
+<section id="cgGpsDebugPanel" hidden aria-label="HUD GPS diagnostic test panel">
+ <div class="cg-gps-title"><span>HUD GPS · Road diagnostic</span><button id="cgGpsDebugClose" type="button">Close</button></div>
+ <div class="cg-gps-privacy">Test while parked. Recording starts only when tapped. FULL export contains your exact location, route and road coordinates; nothing is uploaded automatically.</div>
+ <div class="cg-gps-actions"><button id="cgGpsDebugStart" type="button">Start recording</button><button id="cgGpsDebugSummary" type="button">Copy summary</button><button id="cgGpsDebugCopy" type="button">Copy FULL GPS log</button></div>
+ <div id="cgGpsDebugStatus" aria-live="polite"></div><pre id="cgGpsDebugDetails"></pre>
+</section><div class="cg-hud-footer-logo" aria-label="Smoker’s Map"><span class="cg-hud-footer-shield"><svg width="25" height="26" viewBox="0 0 25 26" role="img" aria-label="Smoker’s Map shield"><path d="M12.5 1 L23 5.6 V13.1 C23 19.2 18.6 23.3 12.5 25 C6.4 23.3 2 19.2 2 13.1 V5.6 Z" fill="#62AAE5"/><path d="M12.5 6.4 L18.5 19.1 L12.5 15.8 L6.5 19.1 Z" fill="#040521"/></svg></span><span><strong>Smoker’s</strong><small>MAP</small></span></div><canvas id="road3d" aria-label="Live heading-up 3D navigation map with fixed scooter"></canvas><div id="mini3d" aria-label="Borderless aerial heading-up mini map, rider centred, surrounding real roads"><canvas id="miniMapLayer" aria-hidden="true"></canvas><canvas id="miniArrowLayer" aria-label="Current location arrow"></canvas></div><div class="mini-tools"><span> AERIAL · HEADING ↑</span><button id="routeToggle" type="button">ROUTE</button></div><div class="roadname"><small>CURRENT ROAD</small><strong>Waiting for road</strong></div><div class="speed" aria-label="Live speedometer"><div class="speed-dial"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="dial-track" cx="50" cy="50" r="45"/><circle class="dial-progress" cx="50" cy="50" r="45"/><circle class="dial-inner" cx="50" cy="50" r="36"/></svg><div class="speed-readout"><strong id="speed">—</strong><span>km/h</span><small>SPEED</small></div></div></div><div class="heading" aria-label="Live heading"><div class="heading-label">HEADING ↗</div><strong>—</strong><em>WAITING FOR GPS</em></div>
+<div class="scooter" id="scooterModel" aria-label="Real-time 3D scooter and rider"><canvas id="scooter3d" aria-label="Three-dimensional scooter and rider rendered with WebGL"></canvas><div id="renderStatus" class="render-status">Starting 3D engine…</div></div>
+<div class="warning"><div class="main"><div class="camicon"><svg viewBox="0 0 32 32"><rect x="5" y="8" width="22" height="14" rx="2" fill="#26313a"/><circle cx="12" cy="15" r="3" fill="#dbe5eb"/><rect x="19" y="12" width="5" height="5" rx="1" fill="#dbe5eb"/><path d="M16 22v7m-5 0 5-4 5 4" stroke="#26313a" stroke-width="2"/></svg></div><div><small>SPEED CAMERA</small><strong id="distance">—</strong></div></div><div class="track"><i></i></div></div>
+<section class="modal" id="modal"><button onclick="document.getElementById('modal').classList.remove('show')">Close</button><strong id="modalTitle">Demo</strong><p>Live CameraGuard HUD.</p></section></main><script>function show(name){document.getElementById('modalTitle').textContent=name+' · Demo';document.getElementById('modal').classList.add('show')}</script><script>
+window.CameraGuardUpdate=function(d){window.__cameraGuardPending=d;};
+document.querySelector('.warning').style.display='none';
+// Report anything that escapes the module script's own try/catch (e.g. a syntax/parse
+// error in the module, or an error thrown from an event handler) to the native diagnostics
+// panel — see CameraGuardDiag added by LiveHudScreen in CameraGuardApp.kt.
+window.addEventListener('error',function(ev){try{window.CameraGuardDiag&&window.CameraGuardDiag.report('window-error',(ev.message||String(ev))+' @ '+(ev.filename||'')+':'+(ev.lineno||''))}catch(_){}});
+window.addEventListener('unhandledrejection',function(ev){try{window.CameraGuardDiag&&window.CameraGuardDiag.report('unhandled-rejection',String(ev.reason))}catch(_){}});
+
+// The DOM HUD must become visible even if the Three.js ES module fails to load.
+(function(){
+ const root=document.querySelector('.hud');
+ if(root){
+   // WebView can report a zero-height percentage containing block despite a loaded DOM.
+   // Resolve HUD height against the actual visual viewport, not a percentage parent.
+   const sizeHud=()=>{
+     const h=Math.max(1,Math.round(window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 1));
+     root.style.setProperty('height',h+'px','important');
+     root.style.setProperty('min-height','0px','important');
+     try{window.CameraGuardDiag&&window.CameraGuardDiag.report('hud-size',root.clientWidth+'x'+root.clientHeight+' viewport='+h);}catch(_){}
+   };
+   sizeHud();
+   window.addEventListener('resize',sizeHud);
+   window.visualViewport?.addEventListener('resize',sizeHud);
+ }
+ try{window.CameraGuardDiag&&window.CameraGuardDiag.report('dom-ready','Static HUD DOM initialized');}catch(_){}
+})();
+</script><script>
+// Test-only HUD GPS diagnostics. Recording is opt-in and stays in this WebView's
+// memory until the rider explicitly copies a report. No server, storage or Logcat.
+(function () {
+'use strict';
+const startBtn=document.getElementById('cgGpsDebugToggle');
+const panel=document.getElementById('cgGpsDebugPanel');
+const status=document.getElementById('cgGpsDebugStatus');
+const detail=document.getElementById('cgGpsDebugDetails');
+let recording=false, records=[], lastRecordedAt=0;
+const MAX_SAMPLES=90, MIN_SAMPLE_MS=1100;
+function fmt(n,d=1){return Number.isFinite(n)?n.toFixed(d):'—';}
+function angleDifference(a,b){return Math.abs(((a-b+540)%360)-180);}
+function nearestSegment(pts,lat,lon,bearing){
+ if(!Array.isArray(pts)||pts.length<2||!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+ const mLat=110540,mLon=111320*Math.max(.01,Math.cos(lat*Math.PI/180));
+ let best=null;
+ for(let i=0;i<pts.length-1;i++){
+  const a=pts[i],b=pts[i+1];
+  if(!Array.isArray(a)||!Array.isArray(b)||!a.every(Number.isFinite)||!b.every(Number.isFinite))continue;
+  const ax=(a[1]-lon)*mLon,ay=(a[0]-lat)*mLat,bx=(b[1]-lon)*mLon,by=(b[0]-lat)*mLat;
+  const dx=bx-ax,dy=by-ay,den=dx*dx+dy*dy;if(den<.000001)continue;
+  const t=Math.max(0,Math.min(1,-(ax*dx+ay*dy)/den));
+  const x=ax+t*dx,y=ay+t*dy,d=Math.hypot(x,y);
+  if(!best||d<best.offsetM){
+   const roadBearing=(Math.atan2(dx,dy)*180/Math.PI+360)%360;
+   const forwardError=Number.isFinite(bearing)?angleDifference(bearing,roadBearing):null;
+   const reverseError=Number.isFinite(bearing)?angleDifference(bearing,(roadBearing+180)%360):null;
+   best={offsetM:d,segmentIndex:i,segmentFraction:t,matchedLatitude:lat+y/mLat,matchedLongitude:lon+x/mLon,
+    wayBearingDeg:roadBearing,nearestDirectionErrorDeg:Math.min(forwardError??Infinity,reverseError??Infinity),
+    roadEastOfGpsM:x,roadNorthOfGpsM:y};
+  }
+ }
+ return best;
+}
+function chosenGeometry(d){
+ if(Array.isArray(d.routePoints)&&d.routePoints.length>=2)return {source:'route',points:d.routePoints};
+ if(Array.isArray(d.roadPoints)&&d.roadPoints.length>=2)return {source:'osm',points:d.roadPoints};
+ return {source:'none',points:[]};
+}
+function rendererSnapshot(){try{return window.CameraGuardHudRendererState?.()||null}catch(_){return null}}
+function validGeometry(pts,max){return Array.isArray(pts)?pts.slice(0,max).filter(p=>Array.isArray(p)&&p.length>=2&&Number.isFinite(p[0])&&Number.isFinite(p[1])).map(p=>[p[0],p[1]]):[]}
+function summary(sample){
+ const m=sample?.mapMatch,r=sample?.renderer;
+ return 'Samples: '+records.length+'/'+MAX_SAMPLES+' · GPS ±'+fmt(sample?.gpsAccuracyM)+' m'+
+  ' · offset '+fmt(m?.offsetM)+' m'+
+  ' · road: '+(r?.source||sample?.selectedGeometrySource||'none')+
+  ' · 3D GPS→road '+fmt(r?.gpsToRenderedCenterlineM)+' m';
+}
+function updateDisplay(){
+ const s=records[records.length-1];
+ status.textContent=(recording?'RECORDING · ':'STOPPED · ')+summary(s);
+ detail.textContent=s?('Raw GPS: '+fmt(s.gpsLatitude,6)+', '+fmt(s.gpsLongitude,6)+
+  '\nMatched road: '+fmt(s.mapMatch?.matchedLatitude,6)+', '+fmt(s.mapMatch?.matchedLongitude,6)+
+  '\nRoad offset: '+fmt(s.mapMatch?.offsetM)+' m · GPS accuracy: '+fmt(s.gpsAccuracyM)+' m'+
+  '\nGPS heading: '+fmt(s.gpsBearingRawDeg)+'° · road heading error: '+fmt(s.mapMatch?.nearestDirectionErrorDeg)+'°'+
+  '\n3D source: '+(s.renderer?.source||'not available')+' · GPS→rendered road: '+fmt(s.renderer?.gpsToRenderedCenterlineM)+' m'+
+  '\n3D scooter x,z: '+fmt(s.renderer?.scooterX)+', '+fmt(s.renderer?.scooterZ)+' · bike→centerline: '+fmt(s.renderer?.scooterCenterlineOffsetM)+' m'):
+  'No samples yet. Start recording after you are safely parked, then begin the test.';
+ document.getElementById('cgGpsDebugStart').textContent=recording?'Stop recording':'Start recording';
+}
+const debug={
+ record(d){
+  if(!recording)return;
+  const now=Date.now();if(now-lastRecordedAt<MIN_SAMPLE_MS)return;
+  lastRecordedAt=now;
+  const lat=Number(d.latitude),lon=Number(d.longitude);
+  const gpsAvailable=Boolean(d.gps)&&Number.isFinite(lat)&&Number.isFinite(lon)&&d.latitude!==null&&d.longitude!==null;
+  const bearing=d.gpsBearingRawDeg==null?null:Number(d.gpsBearingRawDeg);
+  const renderer=rendererSnapshot();
+  const choice=renderer?.source==='osm'||renderer?.source==='cached-osm'
+   ?{source:renderer.source,points:Array.isArray(d.roadPoints)?d.roadPoints:[]}
+   :renderer?.source==='network-osm'?{source:'network-osm',points:[]}
+   :renderer?.source==='road-unavailable'?{source:'road-unavailable',points:[]}:chosenGeometry(d);
+  // The selected 3D network source is a set of connected OSM ways, not a single
+  // roadPoints slice. Match against its individual ways without joining unrelated roads.
+  const networkMatch=choice.source==='network-osm'&&gpsAvailable
+   ?(Array.isArray(d.roadNetwork)?d.roadNetwork:[]).reduce((best,way)=>{
+      const current=nearestSegment(way,lat,lon,bearing);
+      return current&&(!best||current.offsetM<best.offsetM)?current:best;
+     },null):null;
+  const matched=networkMatch||(gpsAvailable?nearestSegment(choice.points,lat,lon,bearing):null);
+  const s={capturedAtUtc:new Date(now).toISOString(),gpsAvailable,
+   gpsLatitude:gpsAvailable?lat:null,gpsLongitude:gpsAvailable?lon:null,
+   gpsAccuracyM:d.gpsAccuracyM??null,gpsBearingRawDeg:bearing,
+   hudFilteredHeadingDeg:d.heading??null,gpsSpeedRawMps:d.gpsSpeedRawMps??null,
+   hudFilteredSpeedKmh:d.speed??null,gpsFixTimeMs:d.gpsFixTimeMs??null,
+   roadWayId:d.roadWayId??null,roadName:d.road||null,
+   selectedGeometrySource:choice.source,mapMatch:matched,
+   // Preserve the source road/route vertices for an offline independent re-check.
+   // These are GPS-sensitive; copying them is an explicit user action.
+   roadPoints:validGeometry(d.roadPoints,120),routePoints:validGeometry(d.routePoints,200),
+   // Network source: retain only the locally matching source way; never export the
+   // entire surrounding neighbourhood in each diagnostic sample.
+   matchedNetworkWay:choice.source==='network-osm'&&gpsAvailable
+     ?(Array.isArray(d.roadNetwork)?d.roadNetwork:[])
+       .map(way=>({way,match:nearestSegment(way,lat,lon,bearing)}))
+       .filter(item=>item.match&&Math.abs(item.match.offsetM-matched?.offsetM)<.01)
+       .slice(0,1).map(item=>validGeometry(item.way,120))[0]||[]:[],
+   renderer};
+  records.push(s);if(records.length>=MAX_SAMPLES){recording=false;}
+  updateDisplay();
+ },
+ getReport(redacted=false){
+  if(redacted){return 'CameraGuard HUD GPS summary (coordinates omitted)\n'+
+   records.map((s,i)=>[i+1,s.capturedAtUtc,'GPS accuracy '+fmt(s.gpsAccuracyM)+' m',
+    'offset '+fmt(s.mapMatch?.offsetM)+' m','road '+(s.renderer?.source||s.selectedGeometrySource),
+    '3D GPS-to-road '+fmt(s.renderer?.gpsToRenderedCenterlineM)+' m',
+    '3D bike-to-road '+fmt(s.renderer?.scooterCenterlineOffsetM)+' m'].join(' | ')).join('\n');}
+  return JSON.stringify({format:'CameraGuard HUD GPS diagnostic v1',
+   warning:'Contains precise GPS coordinates, route and OSM road geometry; share only with a trusted recipient.',
+   generatedAtUtc:new Date().toISOString(),samples:records},null,0);
+ },
+ copy(redacted){
+  if(!records.length){status.textContent='Nothing to copy. Start recording first.';return;}
+  const report=debug.getReport(redacted);
+  if(window.CameraGuardDiag?.copyGpsDebug){window.CameraGuardDiag.copyGpsDebug(report);status.textContent='Copied '+(redacted?'summary':'FULL GPS log')+' to clipboard · '+records.length+' samples';}
+  else{status.textContent='Clipboard bridge unavailable. Please use the Android build, not a browser preview.';}
+ }
+};
+window.CameraGuardGpsDebug=debug;
+startBtn.addEventListener('click',()=>{panel.hidden=!panel.hidden;updateDisplay()});
+document.getElementById('cgGpsDebugClose').addEventListener('click',()=>{panel.hidden=true});
+document.getElementById('cgGpsDebugStart').addEventListener('click',()=>{
+ if(recording){recording=false;}
+ else{records=[];lastRecordedAt=0;recording=true;
+  if(window.__cameraGuardLatest)debug.record(window.__cameraGuardLatest);
+  else if(window.__cameraGuardPending)debug.record(window.__cameraGuardPending);}
+ updateDisplay();
+});
+document.getElementById('cgGpsDebugCopy').addEventListener('click',()=>debug.copy(false));
+document.getElementById('cgGpsDebugSummary').addEventListener('click',()=>debug.copy(true));
+updateDisplay();
+})();
+
+</script><script type="module">
+import * as THREE from './three.module.js';
+try{window.CameraGuardDiag&&window.CameraGuardDiag.report('module-ready','Three.js module loaded');}catch(_){}
+
+// ---- Core 2D HUD state + DOM updates -------------------------------------------------
+// This section must keep working even if WebGL/Three.js below fails to initialize: it is
+// what actually shows live speed, road name and the camera-warning card. It has no
+// dependency on THREE or the WebGL canvases.
+const miniCanvas=document.getElementById('mini3d');
+const miniMapLayer=document.getElementById('miniMapLayer'),miniArrowLayer=document.getElementById('miniArrowLayer');
+const mapCtx=miniMapLayer.getContext('2d'),arrowCtx=miniArrowLayer.getContext('2d');
+let live={gps:false,speed:0,heading:0,hasBearing:false,latitude:null,longitude:null,roadPoints:[],routePoints:[],roadNetwork:[],warning:null};
+let routeEnabled=true;
+const routeToggle=document.getElementById('routeToggle');
+function updateRouteToggle(){if(!routeToggle)return;routeToggle.setAttribute('aria-pressed',String(routeEnabled));routeToggle.textContent=routeEnabled?'ROUTE ON':'ROUTE OFF';}
+if(routeToggle){routeToggle.addEventListener('click',()=>{routeEnabled=!routeEnabled;updateRouteToggle();drawAerial();window.CameraGuardRouteRibbonUpdate?.();});updateRouteToggle();}
+function drawAerial(){
+ const w=miniCanvas.clientWidth,h=miniCanvas.clientHeight;if(!w||!h)return;
+ const dpr=Math.min(devicePixelRatio||1,2);
+ miniMapLayer.width=miniArrowLayer.width=Math.round(w*dpr);miniMapLayer.height=miniArrowLayer.height=Math.round(h*dpr);
+ mapCtx.setTransform(dpr,0,0,dpr,0,0);arrowCtx.setTransform(dpr,0,0,dpr,0,0);
+ const c=mapCtx;c.clearRect(0,0,w,h);
+ c.save();c.translate(w/2,h/2);c.rotate(live.hasBearing?-live.heading*Math.PI/180:0);c.translate(-w/2,-h/2);
+ // Real OSM road geometry only (live.roadNetwork/roadPoints/routePoints) is drawn below -
+ // no decorative grid, fake street lines, or static image behind it any more. The scale
+ // matches live.roadNetwork's actual live-fetched radius (see fetchNearbyRoadNetwork in
+ // CurrentRoadRepository.kt / MINI_MAP_RADIUS_KM's twin below) rather than a much larger
+ // one kilometre viewport when the nearby OSM data service is available.
+ const MINI_MAP_RADIUS_KM=2;
+ const MINI_MAP_GLOW_KM=1;
+ const HIGHLIGHT_RADIUS_KM=.04;
+ const scale=Math.min(w,h)/(MINI_MAP_RADIUS_KM*2);
+ const project=p=>{if(!live.gps||!Number.isFinite(live.latitude)||!Number.isFinite(live.longitude))return null;
+ const lat=p[0],lon=p[1];if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+ const east=(lon-live.longitude)*111.32*Math.cos(live.latitude*Math.PI/180),north=(lat-live.latitude)*111.32;
+ return [w/2+east*scale,h/2-north*scale];};
+ function drawLine(points,color,width,halo){if(!Array.isArray(points)||points.length<2)return;
+ c.beginPath();let begun=false;for(const p of points){const q=project(p);if(!q)continue;if(!begun){c.moveTo(...q);begun=true}else c.lineTo(...q)}
+ if(begun){c.lineCap='round';c.lineJoin='round';if(halo){c.save();c.shadowColor='#28baff';c.shadowBlur=9;c.strokeStyle='#28baff77';c.lineWidth=width+3;c.stroke();c.restore()}c.strokeStyle=color;c.lineWidth=width;c.stroke()}}
+ function closestDistKm(way){if(!Array.isArray(way)||way.length<2||!live.gps)return Infinity;
+ let best=Infinity;for(let i=1;i<way.length;i++){const a=project(way[i-1]),b=project(way[i]);if(!a||!b)continue;
+ const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((w/2-a[0])*dx+(h/2-a[1])*dy)/(dx*dx+dy*dy||1)));
+ best=Math.min(best,Math.hypot(a[0]+t*dx-w/2,a[1]+t*dy-h/2)/scale)}return best}
+ function highlightWithinRadius(way){if(!Array.isArray(way)||way.length<2)return;
+ // Clip each segment against the actual 300m circle; do not brighten its distant ends.
+ const cx=w/2,cy=h/2,r=HIGHLIGHT_RADIUS_KM*scale;
+ c.save();c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.clip();drawLine(way,'#28baff',2.8,false);c.restore()}
+ // A 1 km cyan location halo controls the visibility of the surrounding road network.
+ // The mini-map itself spans 2 km radius, but roads progressively disappear with the halo.
+ const glowRadiusPx=MINI_MAP_GLOW_KM*scale;
+ const isLight=(document.documentElement.dataset.theme==='light');
+ const glow=c.createRadialGradient(w/2,h/2,0,w/2,h/2,glowRadiusPx);
+ glow.addColorStop(0,isLight?'rgba(0,176,214,.28)':'rgba(0,229,255,.30)');
+ glow.addColorStop(.38,isLight?'rgba(0,176,214,.18)':'rgba(0,218,255,.19)');
+ glow.addColorStop(.72,isLight?'rgba(0,176,214,.08)':'rgba(0,190,255,.09)');
+ glow.addColorStop(1,'rgba(0,190,255,0)');
+ c.fillStyle=glow;c.fillRect(0,0,w,h);
+
+ // Draw real roads, then apply the exact same radial falloff as an alpha mask.
+ if(Array.isArray(live.roadNetwork))for(const way of live.roadNetwork)drawLine(way,isLight?'#617d91':'#8da9bc',1.8);
+ drawLine(live.roadPoints,isLight?'#087fb0':'#62AAE5',3.2);
+ highlightWithinRadius(live.roadPoints);
+ c.save();
+ c.globalCompositeOperation='destination-in';
+ const roadMask=c.createRadialGradient(w/2,h/2,0,w/2,h/2,glowRadiusPx);
+ roadMask.addColorStop(0,'rgba(0,0,0,1)');
+ roadMask.addColorStop(.48,'rgba(0,0,0,.98)');
+ roadMask.addColorStop(.72,'rgba(0,0,0,.72)');
+ roadMask.addColorStop(.88,'rgba(0,0,0,.30)');
+ roadMask.addColorStop(1,'rgba(0,0,0,0)');
+ c.fillStyle=roadMask;c.fillRect(0,0,w,h);c.restore();
+
+ // The active route remains readable over the fading road context, within the 2 km viewport.
+ if(routeEnabled&&live.navigationActive!==false&&live.routePoints.length>1){drawLine(live.routePoints,isLight?'#d8f4ff':'#081D56',6.5);drawLine(live.routePoints,isLight?'#087fb0':'#62AAE5',3.4)}
+ c.restore();
+ const a=arrowCtx;a.clearRect(0,0,w,h);
+ // Heading-up: rotate the map, never the centred rider arrow.
+ a.save();a.translate(w/2,h/2);
+ a.beginPath();a.arc(0,0,12,0,Math.PI*2);a.fillStyle='#2bbaff22';a.fill();a.beginPath();a.moveTo(0,-10);a.lineTo(-6,7);a.lineTo(0,4);a.lineTo(6,7);a.closePath();a.fillStyle=!live.gps?'#94a3b8':'#39c7ff';a.fill();a.strokeStyle='#effaff';a.lineWidth=1.3;a.stroke();a.restore();
+}
+window.CameraGuardUpdate=function(d){
+ window.__cameraGuardLatest=d;
+ const requestedTheme=(String(d.themeMode||'DARK').toLowerCase()==='light')?'light':'dark';
+ document.documentElement.dataset.theme=requestedTheme;
+ live={...live,...d};
+ window.CameraGuardApply3dTheme?.(requestedTheme);document.getElementById('speed').textContent=d.gps?String(Math.round(d.speed)):'—';
+ document.querySelector('.roadname strong').textContent=d.road||'ROAD UNAVAILABLE';
+ const bearing=Number(d.heading);const headingOk=Boolean(d.hasBearing)&&Number.isFinite(bearing);const degrees=((Math.round(bearing)%360)+360)%360;const directions=['N','NE','E','SE','S','SW','W','NW'];const headingCard=document.querySelector('.heading');headingCard.querySelector('strong').textContent=headingOk?degrees+'°':'—';headingCard.querySelector('em').textContent=headingOk?directions[Math.round(degrees/45)%8]:'NO HEADING';
+ const warning=document.querySelector('.warning');warning.style.display=d.warning&&!d.nativeWarningOverlay?'block':'none';miniCanvas.classList.toggle('cg-warning-active',Boolean(d.warning));document.querySelector('.hud').classList.toggle('cg-native-warning-active',Boolean(d.warning));
+ if(d.warning){warning.querySelector('.main small').textContent=d.warning.type;document.getElementById('distance').textContent=Math.round(d.warning.distance)+' m'}
+ document.querySelector('.dial-progress').style.strokeDasharray=(Math.min(1,Math.max(0,d.speed/160))*283)+' 283';
+ document.querySelector('.live').lastChild.textContent=d.gps?' GPS LIVE':' GPS WAIT';
+ drawAerial();if(window.CameraGuardRouteRibbonUpdate)window.CameraGuardRouteRibbonUpdate();
+ window.CameraGuardGpsDebug?.record(live);
+};
+if(window.__cameraGuardPending)window.CameraGuardUpdate(window.__cameraGuardPending);
+new ResizeObserver(drawAerial).observe(miniCanvas);drawAerial();
+window.CameraGuardDiag&&window.CameraGuardDiag.report('core-ready','');
+
+// ---- 3D scene: scooter/rider model, perspective road and speedometer dial fill --------
+// Everything below is best-effort visual polish. If WebGL/Three.js is unavailable on this
+// device, the catch below leaves a readable status message and reports it, but the live
+// speed/road/warning readout above keeps working.
+const holder=document.getElementById('scooterModel'), canvas=document.getElementById('scooter3d'), status=document.getElementById('renderStatus');
+try {
+const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.65;
+const scene=new THREE.Scene();const camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(0,2.5,9.7);camera.lookAt(0,1.65,0);
+scene.add(new THREE.HemisphereLight(0xa9d8ff,0x1b2533,3));
+function light(color,power,x,y,z){const l=new THREE.DirectionalLight(color,power);l.position.set(x,y,z);scene.add(l)}light(0xffffff,3.7,-3,7,5);light(0x39b7ff,2.5,3,5,-3);light(0xffffff,1.6,2,3,4);
+const paint=new THREE.MeshPhysicalMaterial({color:0x1a303d,metalness:.72,roughness:.25,clearcoat:1,clearcoatRoughness:.12});
+const shell=new THREE.MeshPhysicalMaterial({color:0x263c4b,metalness:.4,roughness:.33,clearcoat:.8});
+const rubber=new THREE.MeshStandardMaterial({color:0x101317,roughness:.93});const black=new THREE.MeshStandardMaterial({color:0x101a24,metalness:.25,roughness:.6});const textile=new THREE.MeshStandardMaterial({color:0x1c2c3b,roughness:.9});const textile2=new THREE.MeshStandardMaterial({color:0x334b5d,roughness:.84});const silver=new THREE.MeshStandardMaterial({color:0xb7cad5,metalness:.83,roughness:.22});const red=new THREE.MeshPhysicalMaterial({color:0xff263b,emissive:0xd50012,emissiveIntensity:2.2,roughness:.22});const visor=new THREE.MeshPhysicalMaterial({color:0x081420,metalness:.58,roughness:.12,clearcoat:1});const white=new THREE.MeshStandardMaterial({color:0xd9e8ee,roughness:.42});
+const bike=new THREE.Group();scene.add(bike);
+function mesh(geometry,mat,x,y,z,group=bike){const m=new THREE.Mesh(geometry,mat);m.position.set(x,y,z);group.add(m);return m}
+function ball(mat,x,y,z,sx,sy,sz,group=bike){const m=mesh(new THREE.SphereGeometry(1,32,20),mat,x,y,z,group);m.scale.set(sx,sy,sz);return m}
+function box(mat,x,y,z,sx,sy,sz,group=bike){return mesh(new THREE.BoxGeometry(sx,sy,sz),mat,x,y,z,group)}
+function rod(mat,a,b,r1=.025,r2=r1,group=bike){const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),d=B.clone().sub(A);const m=mesh(new THREE.CylinderGeometry(r1,r2,d.length(),12),mat,...A.clone().add(B).multiplyScalar(.5).toArray(),group);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return m}
+// The rider and scooter below are genuine 3D meshes, not an SVG or flat image.
+// Z-positive is the rear, facing the viewer. Two actual rubber wheels and rim geometry.
+for(const z of [-.86,.86]){const tire=mesh(new THREE.TorusGeometry(.39,.135,16,48),rubber,0,.49,z);tire.rotation.y=Math.PI/2;const hub=mesh(new THREE.CylinderGeometry(.24,.24,.13,32),silver,0,.49,z);hub.rotation.x=Math.PI/2;const center=mesh(new THREE.CylinderGeometry(.11,.11,.16,24),black,0,.49,z);center.rotation.x=Math.PI/2;}
+box(black,0,.69,.36,.54,.15,1.55);ball(paint,0,1.02,.48,.53,.34,.79);ball(shell,0,1.17,.91,.58,.29,.31);ball(paint,0,1.23,1.13,.48,.2,.15);
+// Sculpted rear body and flared side panels.
+for(const side of [-1,1]){ball(paint,side*.42,1.08,.79,.19,.24,.49);ball(shell,side*.39,.89,1.04,.14,.13,.22);box(silver,side*.47,1.04,1.12,.11,.055,.19)}
+box(black,0,.88,1.23,.37,.24,.13);box(white,0,.96,1.312,.30,.105,.022);box(red,0,1.37,1.285,.42,.13,.065);for(const side of [-1,1])box(silver,side*.4,1.34,1.28,.12,.06,.04);
+// Seat, steering, mirror stalks and real mirror geometry.
+ball(black,0,1.47,.15,.36,.12,.64);rod(silver,[-.25,1.64,-.45],[.25,1.64,-.45],.035);for(const side of [-1,1]){rod(silver,[side*.27,1.64,-.45],[side*.75,2.05,-.48],.022);ball(black,side*.79,2.08,-.48,.20,.11,.07);ball(silver,side*.79,2.08,-.54,.16,.07,.02)}
+// Rider torso, backpack, shoulders, legs, arms and gloves.
+ball(textile,0,2.24,.10,.45,.65,.30);ball(textile2,0,2.25,.38,.32,.47,.16);box(black,0,2.15,.54,.30,.08,.045);
+for(const side of [-1,1]){ball(textile,side*.29,2.53,.11,.20,.22,.20);rod(textile,[side*.35,2.46,.08],[side*.54,1.94,-.19],.12,.095);rod(textile,[side*.54,1.94,-.19],[side*.30,1.68,-.47],.105,.075);ball(black,side*.30,1.68,-.47,.10,.09,.10);rod(textile,[side*.25,1.84,.21],[side*.43,1.17,.12],.16,.12);rod(textile,[side*.43,1.17,.12],[side*.43,.77,.60],.14,.11);ball(black,side*.44,.72,.66,.16,.11,.24);rod(black,[side*.24,2.65,.32],[side*.25,1.96,.43],.025)}
+// Helmet: a solid shell with raised ridge, rear ventilation, dark lower trim and visor wrap.
+ball(white,0,3.05,.09,.31,.35,.32);ball(visor,0,2.94,.34,.28,.12,.07);ball(black,0,2.83,.12,.29,.07,.27);ball(silver,0,3.37,.06,.12,.025,.17);for(const side of [-1,1])ball(black,side*.22,3.09,.23,.045,.07,.045);
+// Fine hardware and license holder.
+rod(silver,[-.2,.8,1.18],[.2,.8,1.18],.018);box(black,0,.79,1.28,.35,.22,.045);box(white,0,.8,1.311,.27,.12,.008);
+const ground=new THREE.Mesh(new THREE.CircleGeometry(.77,40),new THREE.MeshBasicMaterial({color:0x01070e,transparent:true,opacity:.26,depthWrite:false}));ground.rotation.x=-Math.PI/2;ground.position.set(0,.055,.38);scene.add(ground);
+// More sculpted scooter: front cowl, side fairings, rear suspension, tire tread, and realistic material contrast.
+for(const side of [-1,1]){
+ const fair=ball(paint,side*.47,1.05,.32,.18,.29,.63);fair.rotation.x=-.13;
+ rod(silver,[side*.28,.63,.79],[side*.42,1.09,.22],.035);
+ for(let i=0;i<5;i++)rod(black,[side*.26,.67+i*.045,.88],[side*.38,.68+i*.045,.88],.009);
+ box(black,side*.46,.83,.91,.13,.09,.23);
+ const turn=ball(new THREE.MeshStandardMaterial({color:0xffad40,emissive:0xb35b09,emissiveIntensity:.55}),side*.48,1.34,1.31,.105,.052,.04);
+}
+for(let i=0;i<12;i++){const a=i*Math.PI/6;const t=box(black,0,.49+Math.sin(a)*.39,1.02+Math.cos(a)*.39,.21,.032,.045);t.rotation.x=-a}
+const roadCanvas=document.getElementById('road3d');
+function makeRenderer(c){const r=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:true,powerPreference:'high-performance'});r.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));r.outputColorSpace=THREE.SRGBColorSpace;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.35;return r}
+const roadRenderer=makeRenderer(roadCanvas),roadScene=new THREE.Scene();roadScene.background=new THREE.Color(0x040521);roadScene.fog=new THREE.FogExp2(0x040521,.016);
+const roadCamera=new THREE.PerspectiveCamera(62,1,.1,700);roadCamera.position.set(0,14,42);roadCamera.lookAt(0,.1,-75);
+// The rider and road now share the SAME 3D scene/camera. This is essential: a scooter
+// rendered in a separate WebGL scene cannot remain visually locked to a curved road
+// when the user rotates, tilts or zooms the HUD camera.
+const roadBike=bike.clone(true);roadBike.scale.setScalar(2.12);roadScene.add(roadBike);
+const roadBikeShadow=ground.clone();roadBikeShadow.scale.setScalar(2.12);roadScene.add(roadBikeShadow);
+roadScene.add(new THREE.HemisphereLight(0xa5c8e5,0x111b28,2.4));const sun=new THREE.DirectionalLight(0x8cb9e4,2.1);sun.position.set(-8,14,-15);roadScene.add(sun);
+// Premium road treatment: subtle procedural asphalt grain, clean reflective markings,
+// restrained shoulder lighting and distance falloff. The scooter and HUD layout stay locked.
+const asphaltTextureCanvas=document.createElement('canvas');asphaltTextureCanvas.width=256;asphaltTextureCanvas.height=256;
+const asphaltCtx=asphaltTextureCanvas.getContext('2d');asphaltCtx.fillStyle='#344657';asphaltCtx.fillRect(0,0,256,256);
+// Deterministic grain: no per-frame texture updates or network dependencies.
+for(let i=0;i<2400;i++){const x=(i*73)%256,y=(i*137+Math.floor(i/256)*43)%256;
+ asphaltCtx.fillStyle=i%5===0?'rgba(142,166,183,.085)':'rgba(3,12,23,.09)';asphaltCtx.fillRect(x,y,i%7===0?2:1,1)}
+const asphaltTexture=new THREE.CanvasTexture(asphaltTextureCanvas);asphaltTexture.wrapS=THREE.RepeatWrapping;asphaltTexture.wrapT=THREE.RepeatWrapping;asphaltTexture.repeat.set(2,35);asphaltTexture.colorSpace=THREE.SRGBColorSpace;
+const asphalt=new THREE.MeshStandardMaterial({color:0x879eaf,map:asphaltTexture,roughness:.93,metalness:.025}),
+ shoulder=new THREE.MeshStandardMaterial({color:0x152737,roughness:.98}),
+ edge=new THREE.MeshBasicMaterial({color:0xc4d9e8}),
+ lane=new THREE.MeshBasicMaterial({color:0xd2e4ed}),
+ glowMat=new THREE.MeshBasicMaterial({color:0x62aae5,transparent:true,opacity:.20,depthWrite:false}),
+ routeMat=new THREE.MeshBasicMaterial({color:0x62aae5,transparent:true,opacity:.92,depthWrite:false});
+function plane(w,h,mat,x,y,z,parent=roadScene){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),mat);m.rotation.x=-Math.PI/2;m.position.set(x,y,z);parent.add(m);return m}
+// --- Real road/route geometry ---------------------------------------------------------
+// A selected route has priority. Otherwise choose nearby connected OSM road ways
+// using actual GPS proximity + movement direction. No invented curves/straight roads.
+const ROAD_SEGMENTS=140;
+function localFromLatLon(lat,lon){
+ // Native filtered heading can lag an actual turn. Prefer the GPS course when
+ // moving confidently, but preserve filtered heading at walking/stationary speeds.
+ const moving=Number(live.gpsSpeedRawMps)>=2.5;
+ const gpsCourse=Number(live.gpsBearingRawDeg);
+ const heading=(moving&&live.gpsBearingRawDeg!=null&&Number.isFinite(gpsCourse))?gpsCourse:(live.heading||0);
+ const headingRad=heading*Math.PI/180;
+ const mLat=110540,mLon=111320*Math.cos(live.latitude*Math.PI/180);
+ const north=(lat-live.latitude)*mLat,east=(lon-live.longitude)*mLon;
+ const forward=east*Math.sin(headingRad)+north*Math.cos(headingRad);
+ const right=east*Math.cos(headingRad)-north*Math.sin(headingRad);
+ return {x:right,z:-forward};
+}
+function rawCenterline(latlonPoints){
+ if(!live.gps||!live.hasBearing||!Number.isFinite(live.latitude)||!Number.isFinite(live.longitude))return null;
+ if(!Array.isArray(latlonPoints)||latlonPoints.length<2)return null;
+ const pts=latlonPoints.filter(p=>Array.isArray(p)&&Number.isFinite(p[0])&&Number.isFinite(p[1])).map(p=>localFromLatLon(p[0],p[1]));
+ if(pts.length<2)return null;
+ // Project GPS onto the closest actual road segment. Starting at the first OSM
+ // vertex could place the scooter off the road or behind a distant intersection.
+ let best={distance:Infinity,index:0,t:0,x:0,z:0};
+ for(let i=0;i<pts.length-1;i++){
+  const a=pts[i],b=pts[i+1],dx=b.x-a.x,dz=b.z-a.z,den=dx*dx+dz*dz;
+  if(den<.0001)continue;
+  const t=Math.max(0,Math.min(1,-(a.x*dx+a.z*dz)/den));
+  const x=a.x+t*dx,z=a.z+t*dz,distance=x*x+z*z;
+  if(distance<best.distance)best={distance,index:i,t,x,z};
+ }
+ // Reject a stale/wrong-way road match instead of visually teleporting the bike.
+ const trustedOffset=Math.max(13,Math.min(24,(Number(live.gpsAccuracyM)||5)*2+7));
+ if(best.distance>trustedOffset*trustedOffset)return null;
+ const near={x:best.x,z:best.z};
+ const forward=pts.slice(best.index+1);
+ const backward=pts.slice(0,best.index+1).reverse();
+ // OSM ways have no guaranteed digitization direction. Keep the branch that
+ // runs in front of the rider; preserve every vertex for real curves/roundabouts.
+ const forwardScore=forward.length?forward[Math.min(2,forward.length-1)].z-near.z:Infinity;
+ const backwardScore=backward.length?backward[Math.min(2,backward.length-1)].z-near.z:Infinity;
+ const ahead=forwardScore<=backwardScore?forward:backward;
+ const behind=forwardScore<=backwardScore?backward:forward;
+ const line=[...behind.slice(0,Math.min(behind.length,4)).reverse(),near,...ahead];
+ if(line.length<2)return null;
+ return line;
+}
+// Use only real geometry near the current GPS for mapped roads. During map-data
+// gaps, show a clearly labelled neutral visual ground, never a fabricated route.
+// The short-lived current-way cache is re-projected on every update and rejected
+// as soon as it is too far from the live fix.
+const ROAD_CACHE_MAX_AGE_MS=20000;
+let lastGoodRoadPoints=null,lastGoodRoadPointsAt=0;
+// Build the actual local OSM road graph from the nearby road-network payload.
+// A current OSM way can end in the middle of a street: joining endpoints of
+// adjoining ways lets the HUD follow the known pavement instead of inventing
+// 390 m of straight roadway when the rider passes that endpoint.
+function networkCenterline(ways){
+ if(!live.gps||!live.hasBearing||!Number.isFinite(live.latitude)||!Number.isFinite(live.longitude)||!Array.isArray(ways))return null;
+ const edges=[];
+ for(let wi=0;wi<ways.length;wi++){
+  const way=ways[wi];if(!Array.isArray(way)||way.length<2)continue;
+  const local=way.filter(p=>Array.isArray(p)&&Number.isFinite(p[0])&&Number.isFinite(p[1])).map(p=>{
+    const point=localFromLatLon(p[0],p[1]);
+    point.nodeKey=p[0].toFixed(7)+','+p[1].toFixed(7);
+    return point;
+  });
+  for(let k=0;k<local.length-1;k++){
+   const a=local[k],b=local[k+1],len=Math.hypot(b.x-a.x,b.z-a.z);
+   if(len>.15&&len<180)edges.push({a,b,wi,k,len});
+  }
+ }
+ if(!edges.length)return null;
+ // Join ways only at a shared OSM vertex. Geometric proximity alone can connect
+ // a parallel lane, a flyover or two unrelated roads at a crossing.
+ const adjacency=new Map();
+ for(let i=0;i<edges.length;i++){
+  const edge=edges[i];
+  for(const [a,b] of [[edge.a,edge.b],[edge.b,edge.a]]){
+   if(!adjacency.has(a.nodeKey))adjacency.set(a.nodeKey,[]);
+   adjacency.get(a.nodeKey).push({edgeIndex:i,begin:a,end:b});
+  }
+ }
+ const nearest=e=>{const dx=e.b.x-e.a.x,dz=e.b.z-e.a.z;const t=Math.max(0,Math.min(1,-(e.a.x*dx+e.a.z*dz)/(dx*dx+dz*dz)));const x=e.a.x+t*dx,z=e.a.z+t*dz;return {t,x,z,d2:x*x+z*z};};
+ // A road must be close to the actual GPS fix and roughly aligned with travel.
+ // No snapping to an unrelated distant side road just to fill the HUD.
+ const maxOffset=Math.max(13,Math.min(24,(Number(live.gpsAccuracyM)||5)*2+7));
+ let best=null,bestScore=Infinity;
+ for(let i=0;i<edges.length;i++){
+  const e=edges[i],p=nearest(e),dist=Math.sqrt(p.d2);if(dist>maxOffset)continue;
+  const dx=e.b.x-e.a.x,dz=e.b.z-e.a.z;
+  // In local GPS-heading coordinates, forward direction is -Z.
+  const cosForward=-dz/e.len;
+  const angleError=Math.acos(Math.max(-1,Math.min(1,Math.abs(cosForward))))*180/Math.PI;
+  if(angleError>65)continue;
+  const score=dist+angleError*.17;
+  if(score<bestScore){bestScore=score;best={edgeIndex:i,point:p,reverse:cosForward<0};}
+ }
+ if(!best)return null;
+ const seed=edges[best.edgeIndex],mid={x:best.point.x,z:best.point.z};
+ const nearStart=best.reverse?seed.b:seed.a,nearEnd=best.reverse?seed.a:seed.b;
+ // Follow connected OSM endpoints only, never jump over an intersection gap.
+ // Without a selected route a junction may have several possible exits; the
+ // minimal-angle continuation is a *visual estimate*, not navigation advice.
+ const follow=(previous,current,firstIndex,maxMetres)=>{
+  const out=[],seen=new Set([firstIndex]);let travelled=0;
+  for(let step=0;step<120&&travelled<maxMetres;step++){
+   let option=null,bestPenalty=Infinity;
+   for(const {edgeIndex:i,begin:a,end:b} of adjacency.get(current.nodeKey)||[]){
+     if(seen.has(i))continue;
+     const e=edges[i];
+     const gap=Math.hypot(a.x-current.x,a.z-current.z);if(gap>.15)continue;
+     const prevDx=current.x-previous.x,prevDz=current.z-previous.z;
+     const nextDx=b.x-a.x,nextDz=b.z-a.z;
+     const dot=(prevDx*nextDx+prevDz*nextDz)/(Math.hypot(prevDx,prevDz)*Math.hypot(nextDx,nextDz)||1);
+     const turn=Math.acos(Math.max(-1,Math.min(1,dot)))*180/Math.PI;
+     if(turn>85)continue;
+     // Prefer remaining on the same OSM way without reversing or guessing a turn.
+     const penalty=turn+gap*12+(e.wi===seed.wi?0:3);
+     if(penalty<bestPenalty){bestPenalty=penalty;option={i,b};}
+   }
+   if(!option)break;
+   seen.add(option.i);previous=current;current=option.b;
+   travelled+=Math.hypot(current.x-previous.x,current.z-previous.z);
+   out.push(current);
+  }
+  return out;
+ };
+ const ahead=[mid,nearEnd,...follow(mid,nearEnd,best.edgeIndex,380)];
+ const behind=[nearStart,...follow(mid,nearStart,best.edgeIndex,60)].reverse();
+ const points=[...behind, ...ahead].filter((p,i,arr)=>i===0||Math.hypot(p.x-arr[i-1].x,p.z-arr[i-1].z)>.1);
+ if(points.length<2)return null;
+ return {raw:points,usingRoute:false,source:'network-osm'};
+}
+function currentCenterline(){
+ if(Array.isArray(live.routePoints)&&live.routePoints.length>=2){
+   const raw=rawCenterline(live.routePoints);
+   if(raw)return {raw,usingRoute:true,source:'route'};
+ }
+ // The local graph covers adjoining OSM ways; a single currentRoad.points slice
+ // can terminate ~20 m after the scooter and must not be extended as real road.
+ const network=networkCenterline(live.roadNetwork);
+ if(network){lastGoodRoadPoints=null;return network;}
+ if(Array.isArray(live.roadPoints)&&live.roadPoints.length>=2){
+   const raw=rawCenterline(live.roadPoints);
+   if(raw){lastGoodRoadPoints=live.roadPoints;lastGoodRoadPointsAt=performance.now();return {raw,usingRoute:false,source:'osm'};}
+ }
+ if(lastGoodRoadPoints&&performance.now()-lastGoodRoadPointsAt<ROAD_CACHE_MAX_AGE_MS){
+   const raw=rawCenterline(lastGoodRoadPoints);
+   if(raw)return {raw,usingRoute:false,source:'cached-osm'};
+ }
+ // Keep the VISUAL ground under the rider even when OSM/network geometry is
+ // missing. This fixed, heading-relative corridor is a purely graphical ground
+ // plane: it is NOT a map match, route, inferred real road or camera input.
+ // Do not project the predicted destination/turn onto this placeholder.
+ return {raw:[{x:0,z:22},{x:0,z:-155}],usingRoute:false,source:'visual-fallback'};
+}
+// Corner-aware centreline: short quadratic fillets smooth polygonal OSM/route
+// sampling without rounding away actual junction direction or cutting across lanes.
+function buildRoadCurve(raw){
+ const clean=[];
+ for(const p of raw){
+  if(!Number.isFinite(p.x)||!Number.isFinite(p.z))continue;
+  if(!clean.length||Math.hypot(p.x-clean[clean.length-1].x,p.z-clean[clean.length-1].z)>.08)clean.push(p);
+ }
+ if(clean.length<2)return new THREE.LineCurve3(new THREE.Vector3(0,0,15),new THREE.Vector3(0,0,-30));
+ const points=[new THREE.Vector3(clean[0].x,0,clean[0].z)];
+ for(let i=1;i<clean.length-1;i++){
+  const a=clean[i-1],b=clean[i],c=clean[i+1];
+  const inX=b.x-a.x,inZ=b.z-a.z,outX=c.x-b.x,outZ=c.z-b.z;
+  const inLen=Math.hypot(inX,inZ),outLen=Math.hypot(outX,outZ);
+  if(inLen<.15||outLen<.15)continue;
+  const cos=(inX*outX+inZ*outZ)/(inLen*outLen);
+  if(cos<-.65){points.push(new THREE.Vector3(b.x,0,b.z));continue;}
+  const angle=Math.acos(Math.max(-1,Math.min(1,cos)));
+  // The bend radius is limited by the mapped neighbouring segments. A real
+  // right-angle junction remains a right-angle direction, with a short arc.
+  const radius=Math.min(3.2,inLen*.28,outLen*.28);
+  if(angle<.045||radius<.18){points.push(new THREE.Vector3(b.x,0,b.z));continue;}
+  const enter=new THREE.Vector3(b.x-inX/inLen*radius,0,b.z-inZ/inLen*radius);
+  const exit=new THREE.Vector3(b.x+outX/outLen*radius,0,b.z+outZ/outLen*radius);
+  points.push(enter);
+  const vertex=new THREE.Vector3(b.x,0,b.z);
+  const subdivisions=Math.max(3,Math.ceil(angle*5));
+  for(let j=1;j<subdivisions;j++){
+   const t=j/subdivisions,q=1-t;
+   points.push(enter.clone().multiplyScalar(q*q).addScaledVector(vertex,2*q*t).addScaledVector(exit,t*t));
+  }
+  points.push(exit);
+ }
+ points.push(new THREE.Vector3(clean[clean.length-1].x,0,clean[clean.length-1].z));
+ // Linear segments join at curvature-controlled fillets; no global Catmull-Rom
+ // overshoot at intersections, and road and blue route use this exact curve.
+ const curve=new THREE.CurvePath();
+ for(let i=1;i<points.length;i++)if(points[i].distanceToSquared(points[i-1])>.0001)
+  curve.add(new THREE.LineCurve3(points[i-1],points[i]));
+ curve.arcLengthDivisions=Math.max(160,points.length*12);
+ return curve;
+}
+// A flat ribbon mesh with a fixed vertex/segment count, so it can be reused for every
+// GPS/road update by just rewriting its vertex positions (no per-update allocation or
+// geometry rebuilding - see updateRibbon below).
+function makeRibbonGeometry(segments){
+ const geo=new THREE.BufferGeometry();
+ const n=segments+1;
+ const positions=new Float32Array(n*2*3),normals=new Float32Array(n*2*3),uvs=new Float32Array(n*2*2);
+ for(let i=0;i<n;i++){normals[i*6+1]=1;normals[i*6+4]=1;uvs[i*4]=0;uvs[i*4+1]=i/segments;uvs[i*4+2]=1;uvs[i*4+3]=i/segments}
+ const indices=[];
+ for(let i=0;i<segments;i++){const a=i*2,b=i*2+1,c=(i+1)*2,d=(i+1)*2+1;indices.push(a,b,c, b,d,c)}
+ geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
+ geo.setAttribute('normal',new THREE.BufferAttribute(normals,3));
+ geo.setAttribute('uv',new THREE.BufferAttribute(uvs,2));
+ geo.setIndex(indices);
+ return geo;
+}
+// Rewrites one ribbon's left/right edge vertices from evenly spaced curve points,
+// offset sideways by lateralOffset metres (+ = rider's right). Used for the road
+// surface itself and for anything that runs parallel to it (edges, seam, route line).
+function updateRibbon(geo,pts,halfWidth,y,lateralOffset=0){
+ const pos=geo.attributes.position.array;
+ for(let i=0;i<pts.length;i++){
+   const p=pts[i],prev=pts[i>0?i-1:0],next=pts[i<pts.length-1?i+1:pts.length-1];
+   const tx0=next.x-prev.x,tz0=next.z-prev.z,tl=Math.hypot(tx0,tz0)||1,tx=tx0/tl,tz=tz0/tl;
+   const px=-tz,pz=tx;
+   const cx=p.x+px*lateralOffset,cz=p.z+pz*lateralOffset;
+   const li=i*6,ri=i*6+3;
+   pos[li]=cx-px*halfWidth;pos[li+1]=y;pos[li+2]=cz-pz*halfWidth;
+   pos[ri]=cx+px*halfWidth;pos[ri+1]=y;pos[ri+2]=cz+pz*halfWidth;
+ }
+ geo.attributes.position.needsUpdate=true;
+ geo.computeBoundingSphere();
+}
+// Double-sided as a cheap safety net so the road surface can never disappear from a
+// winding edge case at a very tight curve; the scene camera never goes below it anyway.
+for(const m of [asphalt,shoulder,edge,lane])m.side=THREE.DoubleSide;
+const edgeHalo=new THREE.MeshBasicMaterial({color:0x9acaf0,transparent:true,opacity:.13,depthWrite:false,side:THREE.DoubleSide});
+const seamMat=new THREE.MeshBasicMaterial({color:0x6b8295,transparent:true,opacity:.15,depthWrite:false,side:THREE.DoubleSide});
+const shoulderGlow=new THREE.MeshBasicMaterial({color:0x4f8fc3,transparent:true,opacity:.11,depthWrite:false,side:THREE.DoubleSide});
+glowMat.side=routeMat.side=THREE.DoubleSide;
+const routeEdgeGlowMat=new THREE.MeshBasicMaterial({color:0x2f7fbd,transparent:true,opacity:.22,depthWrite:false,side:THREE.DoubleSide});
+const shoulderGeo=makeRibbonGeometry(ROAD_SEGMENTS),asphaltGeo=makeRibbonGeometry(ROAD_SEGMENTS);
+roadScene.add(new THREE.Mesh(shoulderGeo,shoulder),new THREE.Mesh(asphaltGeo,asphalt));
+// Edge lines have a subdued halo, plus narrow solid white reflective cores.
+const edgeHaloGeoL=makeRibbonGeometry(ROAD_SEGMENTS),edgeHaloGeoR=makeRibbonGeometry(ROAD_SEGMENTS);
+const edgeGeoL=makeRibbonGeometry(ROAD_SEGMENTS),edgeGeoR=makeRibbonGeometry(ROAD_SEGMENTS);
+roadScene.add(new THREE.Mesh(edgeHaloGeoL,edgeHalo),new THREE.Mesh(edgeHaloGeoR,edgeHalo),new THREE.Mesh(edgeGeoL,edge),new THREE.Mesh(edgeGeoR,edge));
+// A faint centre seam adds road depth without competing with the active blue route.
+const seamGeo=makeRibbonGeometry(ROAD_SEGMENTS);
+roadScene.add(new THREE.Mesh(seamGeo,seamMat));
+// Low-intensity shoulder strips and road-edge reflectors create perspective cues.
+// The reflectors themselves stay at fixed intervals along the corridor (a small,
+// purely decorative parallax cue) rather than following every bend.
+const shoulderGlowGeoL=makeRibbonGeometry(ROAD_SEGMENTS),shoulderGlowGeoR=makeRibbonGeometry(ROAD_SEGMENTS);
+roadScene.add(new THREE.Mesh(shoulderGlowGeoL,shoulderGlow),new THREE.Mesh(shoulderGlowGeoR,shoulderGlow));
+// No decorative straight-line reflectors: real OSM curves can bend away from them.
+// 3D route ribbon and symmetric soft blue edge glow are only visible with a selected route.
+const routeRibbonGlowGeo=makeRibbonGeometry(ROAD_SEGMENTS),routeRibbonGeo=makeRibbonGeometry(ROAD_SEGMENTS);
+const routeRibbonGlow=new THREE.Mesh(routeRibbonGlowGeo,glowMat),routeRibbon=new THREE.Mesh(routeRibbonGeo,routeMat);
+roadScene.add(routeRibbonGlow,routeRibbon);
+const routeEdgeGlowGeoL=makeRibbonGeometry(ROAD_SEGMENTS),routeEdgeGlowGeoR=makeRibbonGeometry(ROAD_SEGMENTS);
+const routeEdgeGlows=[new THREE.Mesh(routeEdgeGlowGeoL,routeEdgeGlowMat),new THREE.Mesh(routeEdgeGlowGeoR,routeEdgeGlowMat)];
+roadScene.add(routeEdgeGlows[0],routeEdgeGlows[1]);
+// Track genuine road geometry; a neutral visual ground remains visible during OSM gaps.
+for(const child of roadScene.children){if(child.isMesh && child!==roadBike && child!==roadBikeShadow) child.userData.hudRoadMesh=true;}
+// Decorative streetlights are attached to the SAME centerline as the asphalt.
+// They never act as navigation data; emissive luminaires avoid dozens of costly dynamic lights.
+const lampPoleMat=new THREE.MeshStandardMaterial({color:0x5d7180,metalness:.75,roughness:.28});
+const lampHeadMat=new THREE.MeshStandardMaterial({color:0xffe7aa,emissive:0xffd27a,emissiveIntensity:2.3});
+const streetlamps=[];
+for(let side of [-1,1])for(let i=0;i<9;i++){
+ const group=new THREE.Group();
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.065,5.7,7),lampPoleMat);pole.position.y=2.85;group.add(pole);
+ const arm=new THREE.Mesh(new THREE.BoxGeometry(1.1,.065,.065),lampPoleMat);arm.position.set(-side*.51,5.68,0);group.add(arm);
+ const head=new THREE.Mesh(new THREE.BoxGeometry(.5,.08,.29),lampHeadMat);head.position.set(-side*1.08,5.60,0);group.add(head);
+ roadScene.add(group);streetlamps.push({group,side,i});
+}
+// A type-specific 3D roadside enclosure is shown ONLY for the engine-approved camera target.
+// Its lateral side is inferred from real coordinates when the road geometry is trustworthy.
+const cameraHousingMat=new THREE.MeshStandardMaterial({color:0x253949,metalness:.48,roughness:.33});
+const cameraLensMat=new THREE.MeshStandardMaterial({color:0x05121d,metalness:.35,roughness:.12});
+const cameraAccentMat=new THREE.MeshStandardMaterial({color:0xf2d453,emissive:0xc28d17,emissiveIntensity:.4});
+const roadsideCamera=new THREE.Group();roadsideCamera.visible=false;roadScene.add(roadsideCamera);
+const roadsidePole=new THREE.Mesh(new THREE.CylinderGeometry(.055,.075,3.9,8),lampPoleMat);roadsidePole.position.y=1.95;roadsideCamera.add(roadsidePole);
+const roadsideBox=new THREE.Mesh(new THREE.BoxGeometry(.7,.54,.55),cameraHousingMat);roadsideBox.position.set(0,3.85,0);roadsideCamera.add(roadsideBox);
+const roadsideLens=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,.08,18),cameraLensMat);roadsideLens.rotation.x=Math.PI/2;roadsideLens.position.set(0,3.85,.31);roadsideCamera.add(roadsideLens);
+const roadsideBand=new THREE.Mesh(new THREE.BoxGeometry(.74,.08,.59),cameraAccentMat);roadsideBand.position.set(0,4.1,0);roadsideCamera.add(roadsideBand);
+const roadsideSignMaterial=new THREE.MeshBasicMaterial({color:0x081d56,side:THREE.DoubleSide});
+const roadsideSign=new THREE.Mesh(new THREE.BoxGeometry(1.05,.75,.055),roadsideSignMaterial);roadsideSign.position.set(0,4.72,0);roadsideCamera.add(roadsideSign);
+const roadsideSignal=[];
+for(let i=0;i<3;i++){
+ const m=new THREE.Mesh(new THREE.SphereGeometry(.085,12,8),
+   new THREE.MeshBasicMaterial({color:i===0?0xff3b4b:i===1?0xffb648:0x30ce87}));
+ m.position.set(0,4.95-i*.24,.069);roadsideCamera.add(m);roadsideSignal.push(m);
+}
+function updateRoadsideCamera(curve, roadKnown){
+ const target=live.cameraVisual;
+ roadsideCamera.visible=false;
+ if(!roadKnown||!live.gps||!target||!Number.isFinite(target.latitude)||!Number.isFinite(target.longitude))return;
+ const p=localFromLatLon(target.latitude,target.longitude);
+ // Do not project an opposite road camera into the scooter lane or invent its exact side.
+ let bestT=0,best=Infinity,bestPoint=null,bestTan=null;
+ for(let i=0;i<=ROAD_SEGMENTS;i++){const t=i/ROAD_SEGMENTS,v=curve.getPointAt(t),d=Math.hypot(v.x-p.x,v.z-p.z);if(d<best){best=d;bestT=t;bestPoint=v;bestTan=curve.getTangentAt(t)}}
+ if(!bestPoint||best>25||bestPoint.z>12||bestPoint.z< -320)return;
+ const cross=bestTan.x*(p.z-bestPoint.z)-bestTan.z*(p.x-bestPoint.x);
+ const lateral=cross>=0?7:-7;
+ const nx=-bestTan.z,nz=bestTan.x;
+ roadsideCamera.position.set(bestPoint.x+nx*lateral,.02,bestPoint.z+nz*lateral);
+ roadsideCamera.rotation.y=Math.atan2(-bestTan.x,-bestTan.z);
+ const redLight=/RED LIGHT/i.test(target.type),section=/AVERAGE|SECTION/i.test(target.type),
+   ztl=/ZTL|RESTRICTED/i.test(target.type),bus=/BUS LANE|RESERVED/i.test(target.type),
+   noEntry=/NO ENTRY/i.test(target.type),phone=/MOBILE PHONE|SEATBELT/i.test(target.type);
+ roadsideBox.scale.set(redLight?1.35:section?1.7:phone?1.25:1,redLight?1.2:1,1);
+ roadsideBand.material.color.setHex(redLight||noEntry?0xe54c54:section?0x62aae5:ztl?0x5689ff:bus?0xffc037:phone?0xbd9fff:0xf2d453);
+ roadsideSign.visible=redLight||section||ztl||bus||noEntry||phone;
+ roadsideSignMaterial.color.setHex(redLight||noEntry?0x802b35:section?0x196a8b:ztl?0x164789:bus?0x9a7119:0x4f4184);
+ roadsideSignal.forEach(m=>m.visible=redLight);
+ roadsideCamera.visible=true;
+}
+// --- Main HUD 3D MAP ---------------------------------------------------------------
+// The old single-road corridor is no longer the visual background. The HUD renders the
+// real nearby OSM network as a perspective 3D map. The scooter remains locked at the GPS
+// origin while a smoothed heading-up map translates/rotates below it.
+const hudMapHeadingGroup=new THREE.Group();
+const hudMapWorldGroup=new THREE.Group();hudMapHeadingGroup.add(hudMapWorldGroup);roadScene.add(hudMapHeadingGroup);
+const hudMapRoadMat=new THREE.MeshStandardMaterial({color:0x587daa,roughness:.92,metalness:.02,side:THREE.DoubleSide});
+const hudMapCurrentMat=new THREE.MeshStandardMaterial({color:0x9acaf0,roughness:.82,metalness:.03,side:THREE.DoubleSide});
+const hudMapRouteGlowMat=new THREE.MeshBasicMaterial({color:0x2d7dba,transparent:true,opacity:.34,depthWrite:false,side:THREE.DoubleSide});
+const hudMapRouteMat=new THREE.MeshBasicMaterial({color:0x62aae5,transparent:true,opacity:.98,depthWrite:false,side:THREE.DoubleSide});
+const hudMapFloorMat=new THREE.MeshStandardMaterial({color:0x040521,roughness:1,metalness:0,side:THREE.DoubleSide});
+const hudMapFloor=new THREE.Mesh(new THREE.PlaneGeometry(4200,4200),hudMapFloorMat);hudMapFloor.rotation.x=-Math.PI/2;hudMapFloor.position.y=-.08;hudMapWorldGroup.add(hudMapFloor);
+window.CameraGuardApply3dTheme=function(theme){
+ const light=theme==='light';
+ hudMapFloorMat.color.setHex(light?0xf5f9fe:0x040521);
+ hudMapRoadMat.color.setHex(light?0x88a7c4:0x587daa);
+ hudMapCurrentMat.color.setHex(light?0x466b98:0x9acaf0);
+ hudMapRouteGlowMat.color.setHex(light?0x62aae5:0x2d7dba);
+ hudMapRouteMat.color.setHex(light?0x1e6daf:0x62aae5);
+};
+window.CameraGuardApply3dTheme(document.documentElement.dataset.theme||'dark');
+let mapAnchorLat=null,mapAnchorLon=null;
+let targetGpsEast=0,targetGpsNorth=0,visualGpsEast=0,visualGpsNorth=0;
+let targetMapHeading=0,visualMapHeading=0,mapTransformReady=false;
+function ensureHudMapAnchor(){
+ if(mapAnchorLat==null&&live.gps&&Number.isFinite(live.latitude)&&Number.isFinite(live.longitude)){mapAnchorLat=live.latitude;mapAnchorLon=live.longitude;}
+ return mapAnchorLat!=null;
+}
+function mapPointFromLatLon(lat,lon){
+ if(!ensureHudMapAnchor())return {x:0,z:0};
+ const mLat=110540,mLon=111320*Math.cos(mapAnchorLat*Math.PI/180);
+ const east=(lon-mapAnchorLon)*mLon,north=(lat-mapAnchorLat)*mLat;
+ return {x:east,z:-north};
+}
+function desiredHudHeading(){
+ const raw=Number(live.gpsBearingRawDeg),filtered=Number(live.heading);
+ const deg=Number.isFinite(raw)&&Number(live.gpsSpeedRawMps)>=2.5?raw:(Number.isFinite(filtered)?filtered:0);
+ return deg*Math.PI/180;
+}
+function updateHudMapTargets(){
+ if(!ensureHudMapAnchor())return;
+ const p=mapPointFromLatLon(live.latitude,live.longitude);targetGpsEast=p.x;targetGpsNorth=-p.z;targetMapHeading=desiredHudHeading();
+ if(!mapTransformReady){visualGpsEast=targetGpsEast;visualGpsNorth=targetGpsNorth;visualMapHeading=targetMapHeading;mapTransformReady=true;}
+}
+// Slightly raised real road ribbons provide genuine perspective depth without inventing
+// buildings/POIs. Geometry is stored north-up; heading and GPS movement are group transforms.
+function buildHudMapRibbon(ways,width,y,material,maxRadiusFromAnchor=6500){
+ const verts=[];const half=width/2;if(!Array.isArray(ways)||!ensureHudMapAnchor())return null;
+ for(const way of ways){
+  if(!Array.isArray(way)||way.length<2)continue;let prev=null;
+  for(const ll of way){
+   if(!Array.isArray(ll)||!Number.isFinite(ll[0])||!Number.isFinite(ll[1])){prev=null;continue;}
+   const q=mapPointFromLatLon(ll[0],ll[1]);
+   if(prev&&Math.min(Math.hypot(prev.x,prev.z),Math.hypot(q.x,q.z))<=maxRadiusFromAnchor){
+    const dx=q.x-prev.x,dz=q.z-prev.z,len=Math.hypot(dx,dz);
+    if(len>.05){const nx=-dz/len*half,nz=dx/len*half;
+     const a=[prev.x+nx,y,prev.z+nz],b=[prev.x-nx,y,prev.z-nz],c=[q.x-nx,y,q.z-nz],d=[q.x+nx,y,q.z+nz];
+     verts.push(...a,...b,...c,...a,...c,...d);
+    }
+   }
+   prev=q;
+  }
+ }
+ if(!verts.length)return null;
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.computeVertexNormals();return new THREE.Mesh(g,material);
+}
+function replaceHudMapMeshes(){
+ // Keep floor as child 0; rebuild only real road/route geometry.
+ while(hudMapWorldGroup.children.length>1){const c=hudMapWorldGroup.children.pop();if(c.geometry)c.geometry.dispose();}
+ if(!ensureHudMapAnchor())return;
+ const network=Array.isArray(live.roadNetwork)?live.roadNetwork:[];
+ const roads=buildHudMapRibbon(network,5.0,.00,hudMapRoadMat);if(roads)hudMapWorldGroup.add(roads);
+ if(Array.isArray(live.roadPoints)&&live.roadPoints.length>1){const current=buildHudMapRibbon([live.roadPoints],6.0,.035,hudMapCurrentMat);if(current)hudMapWorldGroup.add(current);}
+ if(routeEnabled&&Array.isArray(live.routePoints)&&live.routePoints.length>1){
+  const glow=buildHudMapRibbon([live.routePoints],8.6,.075,hudMapRouteGlowMat);if(glow)hudMapWorldGroup.add(glow);
+  const route=buildHudMapRibbon([live.routePoints],2.15,.095,hudMapRouteMat);if(route)hudMapWorldGroup.add(route);
+ }
+ // Live SOS alerts: exact emergency point, blinking red ring and rider name.
+ if(Array.isArray(live.sosAlerts)){for(const alert of live.sosAlerts){
+  if(!Number.isFinite(alert.latitude)||!Number.isFinite(alert.longitude))continue;
+  const q=mapPointFromLatLon(alert.latitude,alert.longitude);
+  const group=new THREE.Group();group.position.set(q.x,.13,q.z);group.userData.sosBlink=true;
+  const ringMat=new THREE.MeshBasicMaterial({color:0xff1f3d,transparent:true,opacity:.95,depthWrite:false,side:THREE.DoubleSide});
+  const ring=new THREE.Mesh(new THREE.RingGeometry(5.5,8.5,48),ringMat);ring.rotation.x=-Math.PI/2;ring.userData.sosRing=true;group.add(ring);
+  const dotMat=new THREE.MeshBasicMaterial({color:0xff2748,transparent:true,opacity:.92,depthWrite:false,side:THREE.DoubleSide});
+  const dot=new THREE.Mesh(new THREE.CircleGeometry(4.2,40),dotMat);dot.rotation.x=-Math.PI/2;dot.position.y=.02;group.add(dot);
+  const cv=document.createElement('canvas');cv.width=512;cv.height=128;const cx=cv.getContext('2d');
+  cx.fillStyle='rgba(80,0,14,.92)';cx.beginPath();cx.roundRect(4,8,504,112,24);cx.fill();
+  cx.strokeStyle='#ff4d68';cx.lineWidth=4;cx.stroke();cx.fillStyle='#ffffff';cx.font='700 42px sans-serif';cx.textAlign='center';cx.textBaseline='middle';cx.fillText('SOS · '+String(alert.name||'Rider').slice(0,24),256,64);
+  const tex=new THREE.CanvasTexture(cv);tex.minFilter=THREE.LinearFilter;const sm=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
+  const sp=new THREE.Sprite(sm);sp.position.set(0,8,0);sp.scale.set(34,8.5,1);group.add(sp);hudMapWorldGroup.add(group);
+ }}
+}
+let activeCurve=null,activeCurveLength=1,roadKnownForScene=false,hudGpsToRoadM=null;
+let targetBikeLean=0,currentBikeLean=0;
+function shortestAngleRad(target,current){return Math.atan2(Math.sin(target-current),Math.cos(target-current));}
+function updateRoadGeometry(){
+ // Legacy custom road strip, lamps and road furniture are permanently hidden.
+ for(const object of roadScene.children){if(object.userData?.hudRoadMesh)object.visible=false;}
+ for(const lamp of streetlamps)lamp.group.visible=false;roadsideCamera.visible=false;
+ updateHudMapTargets();replaceHudMapMeshes();
+ const selection=currentCenterline();const source=selection.source,usingRoute=selection.usingRoute;const raw=selection.raw;
+ roadKnownForScene=source!=='visual-fallback';
+ if(roadKnownForScene&&Array.isArray(raw)&&raw.length>1){
+  let best=Infinity;for(let i=0;i<raw.length-1;i++){const a=raw[i],b=raw[i+1],dx=b.x-a.x,dz=b.z-a.z,den=dx*dx+dz*dz;if(den<.0001)continue;
+   const t=Math.max(0,Math.min(1,-(a.x*dx+a.z*dz)/den));const x=a.x+t*dx,z=a.z+t*dz;best=Math.min(best,x*x+z*z);}
+  hudGpsToRoadM=Number.isFinite(best)?Math.sqrt(best):null;activeCurve=buildRoadCurve(raw);activeCurveLength=activeCurve.getLength()||1;
+ }else{hudGpsToRoadM=null;activeCurve=null;activeCurveLength=1;}
+ document.querySelector('.roadname small').textContent='3D MAP · HEADING UP';
+ // Fixed visual anchor: the camera aims ahead so this origin renders slightly below centre.
+ roadBike.visible=true;roadBike.position.set(0,.13,0);roadBike.rotation.y=0;roadBikeShadow.visible=true;roadBikeShadow.position.set(0,.02,0);
+ window.CameraGuardHudRendererState=()=>({source:'3d-map-'+source,usingRoute,sourceVertexCount:Array.isArray(raw)?raw.length:0,renderedCurveLengthM:activeCurveLength,
+  scooterX:roadBike.position.x,scooterZ:roadBike.position.z,scooterYawRad:roadBike.rotation.y,gpsToRenderedCenterlineM:roadKnownForScene?hudGpsToRoadM:null,
+  scooterCenterlineOffsetM:roadKnownForScene?0:null,cameraX:roadCamera.position.x,cameraY:roadCamera.position.y,cameraZ:roadCamera.position.z,gpsOriginX:0,gpsOriginZ:0});
+}
+updateRoadGeometry();
+window.CameraGuardRouteRibbonUpdate=updateRoadGeometry;
+// Legacy lane-dash corridor markers removed: the main HUD is now a full 3D map.
+const moving=[];
+// Soft road-level illumination; no animated flashing or visual obstruction.
+const roadFill=new THREE.PointLight(0x70b5e5,.75,17,2);roadFill.position.set(0,2.8,5);roadScene.add(roadFill);
+// Do not place straight roadside rails/posts across actual mapped bends and junctions.
+// Original locked HUD v12 mini-map canvas and geometry; live GPS/OSM points only.
+// (miniMapLayer/miniArrowLayer/live/drawAerial/CameraGuardUpdate are defined above,
+// outside this try block, so they keep working even if this 3D section fails.)
+// Navigation camera is intentionally locked.  The rider remains anchored while the
+// heading-up map rotates/reprojects from live GPS direction; user gestures cannot displace it.
+function updateHudCamera(){
+ roadCamera.position.set(0,34,50);
+ roadCamera.lookAt(0,0,-44);
+ roadCamera.fov=54;roadCamera.updateProjectionMatrix();
+}
+updateHudCamera();
+const roadTouch=document.getElementById('road3d');roadTouch.style.pointerEvents='none';
+function resizeExtra(){const w=holder.closest('.hud').clientWidth,h=holder.closest('.hud').clientHeight;if(w<1||h<1)return;roadRenderer.setSize(w,h,false);roadCamera.aspect=w/h;roadCamera.updateProjectionMatrix()}
+new ResizeObserver(resizeExtra).observe(holder.closest('.hud'));resizeExtra();
+
+function resize(){const w=holder.clientWidth,h=holder.clientHeight;if(w<1||h<1)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(holder);resize();status.remove();
+let lastHudFrame=performance.now();
+function tick(t){
+ const dt=Math.min(.05,Math.max(.001,(t-lastHudFrame)/1000));lastHudFrame=t;
+ const moveAlpha=1-Math.exp(-dt/0.48),headingAlpha=1-Math.exp(-dt/0.38);
+ visualGpsEast+=(targetGpsEast-visualGpsEast)*moveAlpha;visualGpsNorth+=(targetGpsNorth-visualGpsNorth)*moveAlpha;
+ const remainingHeading=shortestAngleRad(targetMapHeading,visualMapHeading);visualMapHeading+=remainingHeading*headingAlpha;
+ // Translation happens in north-up world coordinates, then the parent rotates the whole map
+ // into rider-direction-up. This keeps the scooter stationary while every real road moves.
+ hudMapWorldGroup.position.set(-visualGpsEast,0,visualGpsNorth);hudMapHeadingGroup.rotation.y=visualMapHeading;
+ // Heading correction also drives a restrained physical lean: right bend -> right lean,
+ // left bend -> left lean. It naturally returns upright as map rotation catches the course.
+ const movingFast=Number(live.gpsSpeedRawMps)>=1.5;targetBikeLean=movingFast?THREE.MathUtils.clamp(-remainingHeading*.72,-.27,.27):0;
+ const leanAlpha=1-Math.exp(-dt/0.18);currentBikeLean+=(targetBikeLean-currentBikeLean)*leanAlpha;
+ roadBike.rotation.z=currentBikeLean;roadBike.position.y=.13+Math.sin(t*.0022)*.009;roadBikeShadow.rotation.z=currentBikeLean*.12;
+ const sosPulse=.5+.5*Math.sin(t*.008);for(const child of hudMapWorldGroup.children){if(child.userData?.sosBlink){child.scale.setScalar(.92+sosPulse*.18);for(const part of child.children){if(part.userData?.sosRing&&part.material)part.material.opacity=.35+sosPulse*.65;}}}
+ roadRenderer.render(roadScene,roadCamera);requestAnimationFrame(tick)}requestAnimationFrame(tick);
+window.CameraGuardDiag&&window.CameraGuardDiag.report('ready','');
+}catch(e){status.textContent='3D renderer unavailable: '+e.message;console.error(e);window.CameraGuardDiag&&window.CameraGuardDiag.report('threejs-init',String(e&&e.message||e))}
+</script></body></html>

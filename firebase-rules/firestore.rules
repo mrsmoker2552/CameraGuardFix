@@ -1,0 +1,196 @@
+rules_version = '2';
+
+// CameraGuard Rider Community Chat.
+//
+// This is a NEW ruleset for a NEW Firestore database in the existing Firebase project.
+// It does not touch, weaken, or replace firebase-rules/realtime-database.rules.json, which
+// keeps governing presence/cameras/road-reports/admins in the Realtime Database exactly as
+// before. Deployment instructions are in the change report.
+//
+// Design notes (see app/src/main/java/com/boss/cameraguard/chat/ChatRepository.kt for the
+// matching client code):
+//  - Every collection requires a signed-in user (auth != null). CameraGuard signs guests in
+//    anonymously, so "signed in" includes guest riders, consistent with the existing
+//    Realtime Database rules (which likewise only check auth != null).
+//  - A rider can only read/write a conversation, its members, and its messages if their uid
+//    is already in that conversation's memberUids.
+//  - A direct-message send is rejected server-side if the recipient has blocked the sender
+//    (blocks/{recipientUid}/blocked/{senderUid} exists) - this is enforced here, not just
+//    hidden in the UI, per the requirement that blocking must actually stop delivery.
+//  - Messages are create-only (no edit/delete) so conversation history stays reliable.
+//  - Known limitation: within a group, this ruleset does not enforce "did the sender also
+//    write a matching message" when it updates the conversation's lastMessage preview
+//    fields - only that a real member wrote it, and only those cosmetic fields. Without a
+//    Cloud Function (intentionally not used here - see change report re: Blaze/billing),
+//    fully atomic cross-document invariants aren't enforceable from client-only rules.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function conversationData(conversationId) {
+      return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
+    }
+
+    function isMember(conversationId) {
+      return isSignedIn() &&
+        conversationData(conversationId).memberUids.hasAny([request.auth.uid]);
+    }
+
+    function isAdminOf(conversationId) {
+      let data = conversationData(conversationId);
+      return isSignedIn() &&
+        ('groupAdmins' in data) &&
+        data.groupAdmins.hasAny([request.auth.uid]);
+    }
+
+    function blockedByOther(otherUid) {
+      return exists(/databases/$(database)/documents/blocks/$(otherUid)/blocked/$(request.auth.uid));
+    }
+
+    // Picks the counterpart uid out of a 2-element direct-conversation memberUids list.
+    // Written with plain indexing/ternary (not list.removeAll()) since this ruleset can't be
+    // deployed or run through the Rules Playground from this environment to confirm less
+    // common list methods - please sanity-check with the Playground before relying on this
+    // in production (see the change report).
+    function otherOf(memberUids) {
+      return memberUids[0] == request.auth.uid ? memberUids[1] : memberUids[0];
+    }
+
+    function onlyChangedKeys(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+
+
+    // ---- Smoker's Rider Community membership + public text feed. ----
+    // Community joining is initiated only after Google linking in the app. Rules keep
+    // membership/profile writes owner-only and never store precise location in feed posts.
+    match /communityMembers/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.displayName is string &&
+        request.resource.data.displayName.size() > 0 &&
+        request.resource.data.displayName.size() <= 40 &&
+        request.resource.data.provider == 'GOOGLE' &&
+        request.resource.data.active == true;
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /communityPosts/{postId} {
+      allow read: if isSignedIn() &&
+        exists(/databases/$(database)/documents/communityMembers/$(request.auth.uid));
+      allow create: if isSignedIn() &&
+        exists(/databases/$(database)/documents/communityMembers/$(request.auth.uid)) &&
+        request.resource.data.authorUid == request.auth.uid &&
+        request.resource.data.authorName is string &&
+        request.resource.data.authorName.size() > 0 &&
+        request.resource.data.authorName.size() <= 40 &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 &&
+        request.resource.data.text.size() <= 1200 &&
+        request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+        // ---- Public minimal chat identity (display name / avatar only - never location,
+    // email or phone). Any signed-in rider can read any profile so names render in
+    // conversation lists and message threads; only the owner can write their own. ----
+    match /chatProfiles/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.data.displayName is string &&
+        request.resource.data.displayName.size() > 0 &&
+        request.resource.data.displayName.size() <= 60;
+    }
+
+    // ---- Private block list. Only the owner can ever read or write it; other riders can
+    // only learn "am I blocked" indirectly, by a blocked send being rejected below. ----
+    match /blocks/{uid}/blocked/{blockedUid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ---- Reports are write-only from the app: reviewed by the developer directly in the
+    // Firebase Console, there is no in-app moderation UI in this build. ----
+    match /reports/{reportId} {
+      allow create: if isSignedIn() && request.resource.data.reporterUid == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+
+    match /conversations/{conversationId} {
+      // Use the document being read for the membership check. A get() of the
+      // same conversation from its own read rule is unnecessary and can fail.
+      allow read: if isSignedIn() &&
+        resource.data.memberUids.hasAny([request.auth.uid]);
+
+      allow create: if isSignedIn() &&
+        request.resource.data.memberUids is list &&
+        request.resource.data.memberUids.hasAny([request.auth.uid]) &&
+        request.resource.data.memberUids.size() >= 2 &&
+        request.resource.data.createdBy == request.auth.uid &&
+        (
+          request.resource.data.type != 'DIRECT' ||
+          (
+            request.resource.data.memberUids.size() == 2 &&
+            // Block check for the direct-conversation counterpart.
+            !blockedByOther(otherOf(request.resource.data.memberUids))
+          )
+        );
+
+      // Any member may update the small "last message preview" fields (written right after
+      // they send a message). Only a group admin may rename the group. A member may remove
+      // only themselves from memberUids/groupAdmins (leaving). Adding members is handled by
+      // an admin updating memberUids (arrayUnion) - membership docs are created separately.
+      allow update: if isMember(conversationId) && (
+        onlyChangedKeys(['lastMessageText', 'lastMessageType', 'lastMessageSenderUid', 'lastMessageAt']) ||
+        (isAdminOf(conversationId) && onlyChangedKeys(['groupName'])) ||
+        (isAdminOf(conversationId) && onlyChangedKeys(['memberUids'])) ||
+        (
+          resource.data.type == 'GROUP' &&
+          onlyChangedKeys(['memberUids', 'groupAdmins']) &&
+          request.resource.data.memberUids.size() == resource.data.memberUids.size() - 1 &&
+          !request.resource.data.memberUids.hasAny([request.auth.uid])
+        )
+      );
+
+      allow delete: if false;
+
+      match /members/{memberUid} {
+        // A rider may only ever create/update their OWN membership doc (role/joinedAt on
+        // first open, lastReadAt on every open) - never someone else's. The roster shown in
+        // the group-info screen comes from the parent conversation's memberUids/groupAdmins
+        // array instead, precisely so a member's doc not existing yet (they haven't opened
+        // the group since being added) never hides them from that list.
+        allow read: if isMember(conversationId);
+        allow write: if isSignedIn() && request.auth.uid == memberUid && isMember(conversationId);
+      }
+
+      match /messages/{messageId} {
+        allow read: if isMember(conversationId);
+        allow update, delete: if false;
+        allow create: if isMember(conversationId) &&
+          request.resource.data.senderUid == request.auth.uid &&
+          request.resource.data.sentAt == request.time &&
+          (
+            conversationData(conversationId).type != 'DIRECT' ||
+            !blockedByOther(otherOf(conversationData(conversationId).memberUids))
+          ) &&
+          (
+            (
+              request.resource.data.type == 'TEXT' &&
+              request.resource.data.text is string &&
+              request.resource.data.text.size() > 0 &&
+              request.resource.data.text.size() <= 4000
+            ) ||
+            (
+              request.resource.data.type in ['IMAGE', 'VOICE'] &&
+              request.resource.data.mediaPath == 'chatMedia/' + conversationId + '/' + messageId + (request.resource.data.type == 'IMAGE' ? '.jpg' : '.m4a')
+            )
+          );
+      }
+    }
+  }
+}

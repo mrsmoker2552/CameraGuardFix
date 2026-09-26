@@ -1,0 +1,19 @@
+# Firebase configuration
+google-services.json
+
+# Local Android configuration
+local.properties
+.gradle/
+**/build/
+.idea/
+*.iml
+
+# Signing keys
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# Local secrets
+.env
+.env.*

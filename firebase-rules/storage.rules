@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// CameraGuard Rider Community Chat media (pictures + voice notes).
+//
+// This only adds the /chatMedia/** rules below; it does not affect any other Storage paths
+// your project may already use. See firebase-rules/firestore.rules for the matching
+// Firestore rules and the change report for deployment steps.
+//
+// Storage Security Rules can call firestore.get()/firestore.exists() to cross-check the
+// Firestore conversation document for the same conversationId - this is the reason chat
+// uses Firestore (not the existing Realtime Database) for its metadata: Realtime Database
+// has no equivalent hook, so membership could not be verified here if conversations lived
+// there instead.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isMember(conversationId) {
+      return request.auth != null &&
+        firestore.get(/databases/(default)/documents/conversations/$(conversationId))
+          .data.memberUids.hasAny([request.auth.uid]);
+    }
+
+    match /chatMedia/{conversationId}/{fileName} {
+      allow read: if isMember(conversationId);
+
+      allow write: if isMember(conversationId) &&
+        (
+          (
+            fileName.matches('.*\\.jpg$') &&
+            request.resource.contentType.matches('image/.*') &&
+            request.resource.size < 3 * 1024 * 1024
+          ) ||
+          (
+            fileName.matches('.*\\.m4a$') &&
+            (request.resource.contentType.matches('audio/.*') || request.resource.contentType == 'application/octet-stream') &&
+            request.resource.size < 5 * 1024 * 1024
+          )
+        );
+
+      // The app never edits a sent photo/voice note after upload; "write" above technically
+      // also permits overwriting the same path (harmless - a client-side send retry reuses
+      // the same message id/filename on purpose, see ChatRepository.sendImage/sendVoice).
+    }
+
+    // Everything else in this bucket is untouched by this ruleset.
+  }
+}
