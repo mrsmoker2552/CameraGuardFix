@@ -39,3 +39,31 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
+
+      # actions/upload-artifact stores results on Azure Blob Storage, which is not reachable
+      # from every delivery environment. Also commit the APK straight into the repo on a
+      # dedicated orphan branch so it can be fetched with plain `git`/`git show` instead.
+      - name: Publish APK to apk-builds branch
+        if: success()
+        run: |
+          set -e
+          APK_PATH="$(ls app/build/outputs/apk/debug/*.apk | head -n1)"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          DEST_NAME="CameraGuard-debug-${SHORT_SHA}-run${GITHUB_RUN_NUMBER}.apk"
+          mkdir -p /tmp/apk-out
+          cp "$APK_PATH" "/tmp/apk-out/${DEST_NAME}"
+          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          git fetch origin apk-builds:apk-builds 2>/dev/null || true
+          if git show-ref --verify --quiet refs/heads/apk-builds; then
+            git checkout apk-builds
+          else
+            git checkout --orphan apk-builds
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          mkdir -p builds
+          cp "/tmp/apk-out/${DEST_NAME}" "builds/${DEST_NAME}"
+          echo "${DEST_NAME}" > builds/LATEST.txt
+          git add builds
+          git commit -m "APK build ${SHORT_SHA} (run ${GITHUB_RUN_NUMBER})"
+          git push origin apk-builds
