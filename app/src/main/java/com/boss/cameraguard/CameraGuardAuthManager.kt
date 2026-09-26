@@ -362,6 +362,18 @@ object CameraGuardAuthManager {
         // legacy GoogleSignIn's account-chooser flow does not depend on that provider at all.
         fun wasGenuineUserCancellation(elapsedMillis: Long) = elapsedMillis >= FAST_CANCEL_THRESHOLD_MILLIS
 
+        // On some Samsung/Play-services builds, when the Credential Manager provider tries a
+        // silent account re-authentication in the background and THAT fails, it surfaces the
+        // failure to the app as GetCredentialCancellationException / TYPE_USER_CANCELED with the
+        // message "[16] Account reauth failed." - i.e. Play Services' own internal re-auth error
+        // (ApiException status 16, CANCELED) reported through the "the user cancelled" exception
+        // type. No bottom sheet/picker is ever shown for this, and it reliably takes ~1-1.5s to
+        // surface - well past FAST_CANCEL_THRESHOLD_MILLIS - so elapsed time cannot tell it apart
+        // from a real cancel. The message text is the only reliable signal here: never treat this
+        // specific provider failure as a genuine dismissal, regardless of how long it took.
+        fun isDisguisedProviderReauthFailure(message: String?) =
+            message?.contains("reauth", ignoreCase = true) == true
+
         logAuthTrace("credential_manager_button_option requesting")
         val firstAttemptStart = android.os.SystemClock.elapsedRealtime()
         try {
@@ -371,7 +383,10 @@ object CameraGuardAuthManager {
         } catch (first: GetCredentialException) {
             val firstElapsed = android.os.SystemClock.elapsedRealtime() - firstAttemptStart
             logAuthFailure("credential_manager_button_option (elapsedMs=$firstElapsed)", first)
-            if (first is GetCredentialCancellationException && wasGenuineUserCancellation(firstElapsed)) {
+            if (first is GetCredentialCancellationException &&
+                wasGenuineUserCancellation(firstElapsed) &&
+                !isDisguisedProviderReauthFailure(first.message)
+            ) {
                 throw GoogleSignInUiException("Sign-in was cancelled.", cancelled = true, cause = first)
             }
 
@@ -388,7 +403,10 @@ object CameraGuardAuthManager {
             } catch (second: GetCredentialException) {
                 val secondElapsed = android.os.SystemClock.elapsedRealtime() - secondAttemptStart
                 logAuthFailure("credential_manager_id_option (elapsedMs=$secondElapsed)", second)
-                if (second is GetCredentialCancellationException && wasGenuineUserCancellation(secondElapsed)) {
+                if (second is GetCredentialCancellationException &&
+                    wasGenuineUserCancellation(secondElapsed) &&
+                    !isDisguisedProviderReauthFailure(second.message)
+                ) {
                     throw GoogleSignInUiException("Sign-in was cancelled.", cancelled = true, cause = second)
                 }
 
