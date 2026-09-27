@@ -971,6 +971,9 @@ private fun NavigationScreen(modifier: Modifier, liveLocation: Location?, filter
             darkTheme = appSettings.themeMode == AppThemeMode.DARK
         )
 
+        val currentWeather by rememberCurrentWeather(liveLocation)
+        WeatherChip(currentWeather, Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 10.dp))
+
         if (fullMap) {
             Column(Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 237.dp),
                 horizontalAlignment = Alignment.End) {
@@ -2104,6 +2107,9 @@ private fun LiveHudScreen(
         put("heading", heading.toDouble())
         put("hasBearing", liveLocation?.hasBearing() == true)
         put("road", currentRoad?.name ?: "")
+        // Free, no-key speed limit from OSM's maxspeed tag (CurrentRoadRepository.parseMaxspeed).
+        // Left absent when OSM has no numeric maxspeed for this way rather than guessing.
+        put("speedLimitKmh", currentRoad?.speedLimitKmh ?: JSONObject.NULL)
         put("latitude", liveLocation?.latitude ?: JSONObject.NULL)
         put("longitude", liveLocation?.longitude ?: JSONObject.NULL)
         // HUD-only diagnostic metadata. The warning engine, location filtering and
@@ -4551,6 +4557,44 @@ private fun VoiceMuteButton(voice: VoiceGuidance, modifier: Modifier = Modifier.
     }
 }
 
+/**
+ * Free, no-key live weather (com.boss.cameraguard.data.WeatherRepository / Open-Meteo) for the
+ * rider's current GPS position. Polls every few minutes rather than on every location update -
+ * weather does not change fast enough to justify it, and it keeps this an informational
+ * add-on, never a dependency other logic waits on.
+ */
+@Composable
+private fun rememberCurrentWeather(location: Location?): State<com.boss.cameraguard.data.CurrentWeather?> {
+    val weather = remember { mutableStateOf<com.boss.cameraguard.data.CurrentWeather?>(null) }
+    val latestLocation by rememberUpdatedState(location)
+    LaunchedEffect(location != null) {
+        while (true) {
+            latestLocation?.let { loc ->
+                weather.value = withContext(Dispatchers.IO) { com.boss.cameraguard.data.WeatherRepository.current(loc) } ?: weather.value
+            }
+            kotlinx.coroutines.delay(10 * 60 * 1000L)
+        }
+    }
+    return weather
+}
+
+@Composable
+private fun WeatherChip(weather: com.boss.cameraguard.data.CurrentWeather?, modifier: Modifier = Modifier) {
+    if (weather == null) return
+    Surface(
+        modifier = modifier.neumorphicRaised(RoundedCornerShape(14.dp), SurfaceDark, 6.dp),
+        color = Color.Transparent, shape = RoundedCornerShape(14.dp)
+    ) {
+        Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(weather.glyph, fontSize = 15.sp)
+            Column {
+                Text("${weather.temperatureC.roundToInt()}°C", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(weather.summary, color = TextSecondary, fontSize = 9.sp, maxLines = 1)
+            }
+        }
+    }
+}
+
 /** Full-map exploration -> selected place -> Directions preview -> Start navigation. */
 @Composable
 private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: Float,
@@ -4563,6 +4607,10 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
     var navigating by rememberSaveable { mutableStateOf(NavigationRouteRuntime.route?.active == true) }
     var selected by remember { mutableStateOf<com.boss.cameraguard.data.PlaceDetailsRepository.Details?>(null) }
     var preview by remember { mutableStateOf<com.boss.cameraguard.data.NavigationRoute?>(null) }
+    // Free alternate-route options (Valhalla `alternates`, see RoutePlannerRepository).
+    // Index 0 is always the primary/fastest route Valhalla returned.
+    var alternateRoutes by remember { mutableStateOf<List<com.boss.cameraguard.data.NavigationRoute>>(emptyList()) }
+    var selectedRouteOption by remember { mutableIntStateOf(0) }
     var query by rememberSaveable { mutableStateOf("") }
     var searchSuggestions by remember { mutableStateOf<List<RoutePlannerRepository.Place>>(emptyList()) }
     var suggestionsLoading by remember { mutableStateOf(false) }
@@ -4583,7 +4631,7 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
     val preferences = remember { RoutePreferencesStore(context) }
     fun select(details: com.boss.cameraguard.data.PlaceDetailsRepository.Details) {
         request++; job?.cancel(); busy=false
-        selected=details; preview=null; places=emptyList(); message=null; follow=false
+        selected=details; preview=null; alternateRoutes=emptyList(); selectedRouteOption=0; places=emptyList(); message=null; follow=false
         query=details.name; searchSuggestions=emptyList(); suggestionsDismissedFor=query; suggestionsError=null
         keyboard?.hide(); focus.clearFocus()
     }
@@ -4602,7 +4650,7 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
     fun search(category:String? = null) {
         if(category==null && query.isBlank()) return
         if(category!=null && location==null) { message="Waiting for GPS to find nearby places."; return }
-        request++; val token=request; job?.cancel(); busy=true; message=null; selected=null; preview=null
+        request++; val token=request; job?.cancel(); busy=true; message=null; selected=null; preview=null; alternateRoutes=emptyList(); selectedRouteOption=0
         searchSuggestions=emptyList(); suggestionsDismissedFor=query
         keyboard?.hide(); focus.clearFocus()
         job=scope.launch {
@@ -4651,8 +4699,8 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
         request++; val token=request; job?.cancel(); busy=true; message=null
         job=scope.launch {
             try {
-                val result=withContext(Dispatchers.IO) { RoutePlannerRepository.route(origin,destination.place(),preferences.load()) }
-                if(token==request) { preview=result; follow=false }
+                val options=withContext(Dispatchers.IO) { RoutePlannerRepository.routeWithAlternates(origin,destination.place(),preferences.load()) }
+                if(token==request) { alternateRoutes=options; selectedRouteOption=0; preview=options.firstOrNull(); follow=false }
             } catch(cancelled:kotlinx.coroutines.CancellationException) { throw cancelled }
             catch(error:Exception) { if(token==request) message="Directions unavailable: ${error.message ?: "network error"}" }
             finally { if(token==request) busy=false }
@@ -4786,7 +4834,7 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
                 Column(Modifier.padding(18.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment=Alignment.CenterVertically) {
                         Text(place.name,color=TextPrimary,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f),maxLines=2,overflow=TextOverflow.Ellipsis)
-                        IconButton(onClick={request++;job?.cancel();busy=false;selected=null;preview=null}){Icon(Icons.Default.Close,"Close place",tint=TextSecondary)}
+                        IconButton(onClick={request++;job?.cancel();busy=false;selected=null;preview=null;alternateRoutes=emptyList();selectedRouteOption=0}){Icon(Icons.Default.Close,"Close place",tint=TextSecondary)}
                     }
                     Text(place.category,color=CyanGlow,fontSize=12.sp)
                     if(place.address.isNotBlank()) Text(place.address,color=TextSecondary,fontSize=12.sp)
@@ -4798,6 +4846,27 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
                         Text("Your location → ${place.name}",color=TextSecondary,fontSize=12.sp,maxLines=2)
                         Text("${kotlin.math.ceil(route.durationSeconds/60).toInt().coerceAtLeast(1)} min · ${"%.1f".format(route.distanceMeters/1000)} km",color=CyanGlow,fontSize=23.sp,fontWeight=FontWeight.Bold)
                         Text("Estimated driving time",color=TextSecondary,fontSize=11.sp)
+                        // Free alternate road options (Valhalla `alternates`, no extra service/key).
+                        // Only shown when the routing backend actually returned more than one.
+                        if (alternateRoutes.size > 1) {
+                            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                alternateRoutes.forEachIndexed { index, option ->
+                                    val chosen = index == selectedRouteOption
+                                    OutlinedButton(
+                                        onClick = { selectedRouteOption = index; preview = option },
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(containerColor = if (chosen) CyanGlow.copy(alpha = .16f) else SurfaceDark, contentColor = if (chosen) CyanGlow else TextSecondary),
+                                        border = BorderStroke(1.dp, if (chosen) CyanGlow else PremiumLine),
+                                        shape = RoundedCornerShape(11.dp)
+                                    ) {
+                                        Text(
+                                            (if (index == 0) "Fastest" else "Alt ${index + 1}") + " · ${kotlin.math.ceil(option.durationSeconds/60).toInt().coerceAtLeast(1)}m",
+                                            fontSize = 11.sp, fontWeight = if (chosen) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                     Button(onClick={
                         val route=preview

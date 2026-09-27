@@ -6,7 +6,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.*
 
-data class CurrentRoad(val osmWayId: Long, val name: String?, val points: List<RoadPoint>)
+data class CurrentRoad(val osmWayId: Long, val name: String?, val points: List<RoadPoint>, val speedLimitKmh: Int? = null)
 
 /** Lightweight OSM map matcher for the HUD only. It never participates in camera-warning decisions. */
 class CurrentRoadRepository {
@@ -44,7 +44,7 @@ class CurrentRoadRepository {
                     // Include a larger local corridor in BOTH OSM digitization directions.
                     // A tiny 3-point slice caused the HUD road to end almost immediately.
                     val start=maxOf(0,j-36); val end=minOf(pts.size,j+61)
-                    best=CurrentRoad(o.optLong("id"),tags?.optString("name")?.takeIf{it.isNotBlank()},pts.subList(start,end))
+                    best=CurrentRoad(o.optLong("id"),tags?.optString("name")?.takeIf{it.isNotBlank()},pts.subList(start,end),parseMaxspeed(tags?.optString("maxspeed")))
                 }
             }
         }; return best
@@ -52,6 +52,22 @@ class CurrentRoadRepository {
     private fun segmentDistanceMeters(lat:Double,lon:Double,a:RoadPoint,b:RoadPoint):Double { val mLat=110540.0; val mLon=111320.0*cos(Math.toRadians(lat)); val ax=(a.longitude-lon)*mLon; val ay=(a.latitude-lat)*mLat; val bx=(b.longitude-lon)*mLon; val by=(b.latitude-lat)*mLat; val dx=bx-ax; val dy=by-ay; val t=if(dx*dx+dy*dy==0.0)0.0 else (-(ax*dx+ay*dy)/(dx*dx+dy*dy)).coerceIn(0.0,1.0); return hypot(ax+t*dx,ay+t*dy) }
     private fun bearing(a:RoadPoint,b:RoadPoint)=((Math.toDegrees(atan2(sin(Math.toRadians(b.longitude-a.longitude))*cos(Math.toRadians(b.latitude)), cos(Math.toRadians(a.latitude))*sin(Math.toRadians(b.latitude))-sin(Math.toRadians(a.latitude))*cos(Math.toRadians(b.latitude))*cos(Math.toRadians(b.longitude-a.longitude))))+360)%360)
     private fun angleDiff(a:Double,b:Double)=abs((a-b+540)%360-180)
+
+    /**
+     * OSM's `maxspeed` tag is free-text: usually a plain km/h number, sometimes "30 mph"
+     * (mainly UK/US ways) or a country implicit-limit code (e.g. "PK:urban") that this app
+     * cannot resolve to a number without a lookup table. Anything it can't confidently
+     * parse as a numeric limit is left null rather than guessed, since a wrong displayed
+     * speed limit is worse than none.
+     */
+    private fun parseMaxspeed(raw: String?): Int? {
+        val value = raw?.trim()?.lowercase() ?: return null
+        if (value.isEmpty()) return null
+        val mphMatch = Regex("""(\d+)\s*mph""").find(value)
+        if (mphMatch != null) return (mphMatch.groupValues[1].toDouble() * 1.60934).roundToInt()
+        val plain = Regex("""^(\d+)""").find(value) ?: return null
+        return plain.groupValues[1].toIntOrNull()
+    }
 
     /**
      * Keep real OSM road sections near the rider instead of taking the first N ways

@@ -90,7 +90,17 @@ object RoutePlannerRepository {
         }.sortedBy { distanceMeters(LatLng(origin.latitude, origin.longitude), LatLng(it.lat, it.lon)) }.take(12)
     }
 
-    fun route(origin: Location, destination: Place, preferences: RoutePreferences = RoutePreferences()): NavigationRoute {
+    fun route(origin: Location, destination: Place, preferences: RoutePreferences = RoutePreferences()): NavigationRoute =
+        routeWithAlternates(origin, destination, preferences).first()
+
+    /**
+     * Same routing call as [route], but also asks Valhalla for up to one alternate road
+     * option (free - Valhalla's public instance already supports the `alternates` request
+     * field, no separate service or key needed) and returns every option found, primary
+     * first. Falls back to a single-route list when the backend has no free-form deviation
+     * to offer, or when OSRM (which has no alternates support here) is used instead.
+     */
+    fun routeWithAlternates(origin: Location, destination: Place, preferences: RoutePreferences = RoutePreferences(), maxAlternates: Int = 1): List<NavigationRoute> {
         // Valhalla exposes actual road-cost controls. Autostrada avoidance is strictest;
         // Tangenziale uses a strong highway penalty while still allowing access when no practical alternative exists.
         val highwayUse = when {
@@ -109,6 +119,7 @@ object RoutePlannerRepository {
                 .put("use_highways", highwayUse)
                 .put("use_tolls", tollUse)))
             put("units", "kilometers")
+            if (maxAlternates > 0) put("alternates", maxAlternates)
         }
         val calculated = runCatching { routeValhalla(destination, payload.toString()) }
             .getOrElse { error ->
@@ -118,30 +129,42 @@ object RoutePlannerRepository {
                 if (preferences.avoidAutostrada || preferences.avoidTangenziale || preferences.avoidTollRoads) {
                     throw IllegalStateException("Preferred-route service unavailable; avoidance options were not relaxed", error)
                 }
-                routeOsrm(origin, destination)
+                listOf(routeOsrm(origin, destination))
             }
 
-        // Lock the rendered route to the two user-visible navigation anchors.
+        // Lock every rendered route to the two user-visible navigation anchors.
         // Routing engines snap break points to the drivable carriageway, which is correct
         // for guidance, but the UI must visibly start at the rider's live GPS position and
         // terminate at the selected destination pin. These short connector segments make
         // that relationship explicit without changing the calculated road path.
         val originPoint = LatLng(origin.latitude, origin.longitude)
         val destinationPoint = LatLng(destination.lat, destination.lon)
-        val normalized = buildList {
-            add(originPoint)
-            calculated.points.forEach { point ->
-                if (lastOrNull() == null || distanceMeters(last(), point) > 1.5f) add(point)
+        return calculated.map { candidate ->
+            val normalized = buildList {
+                add(originPoint)
+                candidate.points.forEach { point ->
+                    if (lastOrNull() == null || distanceMeters(last(), point) > 1.5f) add(point)
+                }
+                if (lastOrNull() == null || distanceMeters(last(), destinationPoint) > 1.5f) add(destinationPoint)
+                else if (isNotEmpty()) this[size - 1] = destinationPoint
             }
-            if (lastOrNull() == null || distanceMeters(last(), destinationPoint) > 1.5f) add(destinationPoint)
-            else if (isNotEmpty()) this[size - 1] = destinationPoint
+            candidate.copy(points = normalized)
         }
-        return calculated.copy(points = normalized)
     }
 
-    private fun routeValhalla(destination: Place, payload: String): NavigationRoute {
+    /** First element is Valhalla's primary trip; any further elements are its `alternates`, cheapest-first as returned. */
+    private fun routeValhalla(destination: Place, payload: String): List<NavigationRoute> {
         val root = JSONObject(post("https://valhalla1.openstreetmap.de/route", payload))
-        val trip = root.getJSONObject("trip")
+        val trips = buildList {
+            add(root.getJSONObject("trip"))
+            root.optJSONArray("alternates")?.let { alts ->
+                for (i in 0 until alts.length()) alts.optJSONObject(i)?.optJSONObject("trip")?.let { add(it) }
+            }
+        }
+        return trips.map { trip -> parseValhallaTrip(destination, trip) }
+    }
+
+    private fun parseValhallaTrip(destination: Place, trip: JSONObject): NavigationRoute {
         val legs = trip.getJSONArray("legs")
         val points = mutableListOf<LatLng>()
         val steps = mutableListOf<NavigationStep>()
