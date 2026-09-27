@@ -90,7 +90,7 @@ object OfflineMapRepository {
                 })
                 offlineRegion.setDownloadState(OfflineRegion.STATE_ACTIVE)
             }
-            override fun onError(error: String?) { onError(error ?: "Offline download failed") }
+            override fun onError(error: String) { onError(error) }
         })
     }
 
@@ -125,7 +125,7 @@ object OfflineMapRepository {
                     })
                 }
             }
-            override fun onError(error: String?) { callback(emptyList()) }
+            override fun onError(error: String) { callback(emptyList()) }
         })
     }
 
@@ -135,10 +135,10 @@ object OfflineMapRepository {
                 val match = offlineRegions?.firstOrNull { it.id == regionId } ?: return callback(false)
                 match.delete(object : OfflineRegion.OfflineRegionDeleteCallback {
                     override fun onDelete() { callback(true) }
-                    override fun onError(error: String?) { callback(false) }
+                    override fun onError(error: String) { callback(false) }
                 })
             }
-            override fun onError(error: String?) { callback(false) }
+            override fun onError(error: String) { callback(false) }
         })
     }
 
