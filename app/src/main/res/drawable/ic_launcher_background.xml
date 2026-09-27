@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App launcher icon background. No launcher icon existed before this (no android:icon in the
+     manifest, no mipmap/ resources at all), so every install showed a generic default icon.
+     Brand deep-navy background, matching CameraGuardPalette.Background (#040521) fading into the
+     dark-surface blue (#081D56) used across the app's cards, so the icon reads as "this app" next
+     to its own UI rather than a flat placeholder colour. -->
+<vector xmlns:android="http://schemas.android.com/apis/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M0,0h108v108h-108z">
+        <aapt:attr xmlns:aapt="http://schemas.android.com/aapt" name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="40"
+                android:gradientRadius="76"
+                android:startColor="#0D2D6B"
+                android:centerColor="#081D56"
+                android:endColor="#040521" />
+        </aapt:attr>
+    </path>
+</vector>

@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 android {
@@ -13,8 +14,8 @@ android {
         applicationId = "com.boss.cameraguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 53
-        versionName = "1.6.12"
+        versionCode = 54
+        versionName = "1.6.13"
     }
 
     signingConfigs {
@@ -78,6 +79,8 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-database")
+    // Crash/ANR/non-fatal reporting for the same Firebase project already used above.
+    implementation("com.google.firebase:firebase-crashlytics")
     // Rider Community Chat backend. Presence/cameras/road-reports keep using the existing
     // Realtime Database above (untouched); chat uses Firestore + Storage instead because
     // Storage Security Rules can call firestore.get()/exists() to verify a sender is an

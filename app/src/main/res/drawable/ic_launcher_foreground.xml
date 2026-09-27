@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Foreground: the same shield mark already used across the app's own UI (HUD header logo,
+     rider-facing posters) - a shield in the brand accent blue (#62AAE5) with a cut-out chevron
+     in the brand deep-navy (#040521), so the launcher icon actually looks like this app rather
+     than a generic default. Kept inside the ~66dp adaptive-icon safe zone so it isn't clipped by
+     circular/squircle/rounded-square masks on different launchers. -->
+<vector xmlns:android="http://schemas.android.com/apis/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#62AAE5"
+        android:pathData="M54,27 L76.62,36.91 V53.06 C76.62,66.2 67.14,75.03 54,78.69 C40.86,75.03 31.38,66.2 31.38,53.06 V36.91 Z" />
+    <path
+        android:fillColor="#040521"
+        android:pathData="M54,38.63 L66.92,65.98 L54,58.88 L41.08,65.98 Z" />
+</vector>

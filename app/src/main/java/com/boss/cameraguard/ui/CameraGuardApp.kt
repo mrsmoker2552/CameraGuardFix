@@ -1959,6 +1959,10 @@ private fun LiveHudScreen(
         it.distanceMeters <= appSettings.warningDistanceFor(it.camera.type).toFloat()
     } == true
     val selectedRoute = NavigationRouteRuntime.route
+    // HUD previously had no spoken turn-by-turn guidance at all (only the Map tab did).
+    // Reads the same shared route the Map tab writes to; see SpeakRouteGuidance above.
+    val hudVoice = rememberVoiceGuidance()
+    SpeakRouteGuidance(hudVoice, active = true, liveLocation = liveLocation)
 
     val context = LocalContext.current
 
@@ -2229,11 +2233,22 @@ private fun LiveHudScreen(
 
         // The HUD control replaces the temporary diagnostics button. It toggles
         // the existing native HUD mode; diagnostics remain available in source logs.
-        TextButton(
-            onClick = { onHudModeChanged(!hudModeActive) },
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 10.dp),
-            colors = ButtonDefaults.textButtonColors(containerColor = CameraGuardPalette.Surface.copy(alpha = 0.92f), contentColor = CameraGuardPalette.Accent)
-        ) { Text(if (hudModeActive) "EXIT HUD" else "HUD", fontSize = 12.sp) }
+        Row(
+            Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            VoiceMuteButton(
+                hudVoice,
+                modifier = Modifier.size(34.dp),
+                containerColor = CameraGuardPalette.Surface.copy(alpha = 0.92f),
+                iconSize = 16.dp
+            )
+            TextButton(
+                onClick = { onHudModeChanged(!hudModeActive) },
+                colors = ButtonDefaults.textButtonColors(containerColor = CameraGuardPalette.Surface.copy(alpha = 0.92f), contentColor = CameraGuardPalette.Accent)
+            ) { Text(if (hudModeActive) "EXIT HUD" else "HUD", fontSize = 12.sp) }
+        }
 
         SosFloatingButton(
             active = ownSosActive,
@@ -4445,6 +4460,97 @@ private fun AlertPreviewCard(title: String, subtitle: String, icon: ImageVector,
     }
 }
 
+// ---- Shared spoken turn-by-turn voice guidance -----------------------------------------
+// The Map tab (NavigationScreen, above) has its own long-standing voice/mute implementation
+// and is left untouched. Route and HUD previously had no voice guidance and no mute control
+// at all - this adds the same "speak upcoming turns, mutable, off by default never silently
+// resumes" behaviour to both, reading the same shared NavigationRouteRuntime the Map tab
+// already writes to. Each screen owns its own TextToSpeech instance (only one of Map/Route/HUD
+// is composed at a time, so there is no overlap) and its own mute state, matching how the Map
+// tab already does it; muting on one tab does not (yet) carry over to another.
+private class VoiceGuidance(
+    val speaker: NavigationVoiceSpeaker,
+    val enabled: androidx.compose.runtime.MutableState<Boolean>,
+    val ready: androidx.compose.runtime.MutableState<Boolean>
+)
+
+@Composable
+private fun rememberVoiceGuidance(): VoiceGuidance {
+    val context = LocalContext.current
+    val ready = remember { mutableStateOf(false) }
+    val enabled = rememberSaveable { mutableStateOf(true) }
+    val speaker = remember(context) { NavigationVoiceSpeaker(context.applicationContext) { ready.value = it } }
+    DisposableEffect(speaker) { onDispose { speaker.shutdown() } }
+    return remember(speaker) { VoiceGuidance(speaker, enabled, ready) }
+}
+
+/** Polls the shared route runtime (a plain volatile, not Compose state) and speaks upcoming turns. */
+@Composable
+private fun SpeakRouteGuidance(voice: VoiceGuidance, active: Boolean, liveLocation: Location?) {
+    var route by remember { mutableStateOf(NavigationRouteRuntime.route) }
+    var routeRevision by remember { mutableIntStateOf(NavigationRouteRuntime.revision) }
+    LaunchedEffect(active) {
+        while (active) {
+            if (routeRevision != NavigationRouteRuntime.revision) {
+                routeRevision = NavigationRouteRuntime.revision
+                route = NavigationRouteRuntime.route
+            }
+            kotlinx.coroutines.delay(700)
+        }
+    }
+    val spokenRouteKey = remember { mutableStateOf("") }
+    val spokenMilestones = remember { mutableSetOf<String>() }
+    val progressTracker = remember(route) { route?.let { NavigationProgressTracker(it) } }
+    val progress = remember(route, liveLocation) { liveLocation?.let { progressTracker?.update(it) } }
+    LaunchedEffect(active, routeRevision, route?.active, progress, voice.enabled.value, voice.ready.value, liveLocation) {
+        if (!active || route?.active != true || !voice.enabled.value || !voice.ready.value) return@LaunchedEffect
+        val loc = liveLocation ?: return@LaunchedEffect
+        val fresh = (android.os.SystemClock.elapsedRealtimeNanos() - loc.elapsedRealtimeNanos) in 0L..15_000_000_000L
+        if (!fresh || !loc.hasAccuracy() || loc.accuracy > 35f) return@LaunchedEffect
+        val current = progress ?: return@LaunchedEffect
+        if (current.offRouteMeters > 55.0) return@LaunchedEffect
+        val routeKey = routeRevision.toString()
+        if (spokenRouteKey.value != routeKey) {
+            spokenMilestones.clear()
+            spokenRouteKey.value = routeKey
+        }
+        val instruction = current.nextInstruction.trim()
+        if (instruction.isBlank() || instruction == "Continue to destination") return@LaunchedEffect
+        val nextMeters = current.nextTurnMeters
+        val band = when {
+            nextMeters <= 35.0 -> "now"
+            nextMeters <= 120.0 -> "near"
+            nextMeters <= 450.0 -> "approach"
+            else -> null
+        } ?: return@LaunchedEffect
+        val key = "$instruction:$band"
+        if (spokenMilestones.add(key)) {
+            val intro = when (band) {
+                "now" -> "Now, "
+                "near" -> "In ${nextMeters.roundToInt()} meters, "
+                else -> "In about ${((nextMeters / 50.0).roundToInt() * 50).coerceAtLeast(50)} meters, "
+            }
+            voice.speaker.speak(intro + instruction)
+        }
+    }
+    LaunchedEffect(route?.active, voice.enabled.value) {
+        if (route?.active != true || !voice.enabled.value) voice.speaker.stop()
+    }
+}
+
+@Composable
+private fun VoiceMuteButton(voice: VoiceGuidance, modifier: Modifier = Modifier.size(44.dp), containerColor: Color = SurfaceDark, tint: Color = CyanGlow, iconSize: androidx.compose.ui.unit.Dp = 20.dp) {
+    FloatingActionButton(
+        onClick = { voice.enabled.value = !voice.enabled.value; if (!voice.enabled.value) voice.speaker.stop() },
+        modifier = modifier.shadow(8.dp, RoundedCornerShape(16.dp), clip = false),
+        shape = RoundedCornerShape(16.dp), containerColor = containerColor, contentColor = tint,
+        elevation = FloatingActionButtonDefaults.elevation(0.dp)
+    ) {
+        Icon(if (voice.enabled.value) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+            if (voice.enabled.value) "Mute voice guidance" else "Unmute voice guidance", Modifier.size(iconSize))
+    }
+}
+
 /** Full-map exploration -> selected place -> Directions preview -> Start navigation. */
 @Composable
 private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: Float,
@@ -4469,6 +4575,8 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
     var recenter by remember { mutableIntStateOf(0) }
     var mapLayersOpen by rememberSaveable { mutableStateOf(false) }
     var routeLayers by remember { mutableStateOf(com.boss.cameraguard.map.RouteMapLayers()) }
+    val routeVoice = rememberVoiceGuidance()
+    SpeakRouteGuidance(routeVoice, active = navigating, liveLocation = location)
 
     var request by remember { mutableIntStateOf(0) }
     var job by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
@@ -4635,6 +4743,7 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
             FloatingActionButton(onClick={follow=true;recenter++;routeOptionsOpen=false;roadAlertsOpen=false;mapLayersOpen=false},modifier=Modifier.size(44.dp).shadow(8.dp,RoundedCornerShape(16.dp),clip=false),shape=RoundedCornerShape(16.dp),containerColor=SurfaceDark,contentColor=CyanGlow,elevation=FloatingActionButtonDefaults.elevation(0.dp)) {
                 Icon(Icons.Default.MyLocation,"My location",Modifier.size(20.dp))
             }
+            VoiceMuteButton(routeVoice)
             SosFloatingButton(
                 active = ownSosActive,
                 enabled = settings.communityModeEnabled && location != null,
