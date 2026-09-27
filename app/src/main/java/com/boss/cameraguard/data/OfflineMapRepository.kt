@@ -96,13 +96,14 @@ object OfflineMapRepository {
 
     fun list(context: Context, callback: (List<OfflineArea>) -> Unit) {
         manager(context).listOfflineRegions(object : OfflineManager.ListOfflineRegionsCallback {
-            override fun onList(offlineRegions: Array<OfflineRegion>) {
-                if (offlineRegions.isEmpty()) { callback(emptyList()); return }
+            override fun onList(offlineRegions: Array<OfflineRegion>?) {
+                if (offlineRegions.isNullOrEmpty()) { callback(emptyList()); return }
                 val results = mutableListOf<OfflineArea>()
                 var remaining = offlineRegions.size
                 offlineRegions.forEach { region ->
                     region.getStatus(object : OfflineRegion.OfflineRegionStatusCallback {
-                        override fun onStatus(status: OfflineRegionStatus) {
+                        override fun onStatus(status: OfflineRegionStatus?) {
+                            if (status == null) { remaining--; if (remaining == 0) callback(results.sortedBy { it.name }); return }
                             val meta = runCatching { JSONObject(String(region.metadata, Charsets.UTF_8)) }.getOrNull()
                             results += OfflineArea(
                                 region.id, meta?.optString("name")?.takeIf { it.isNotBlank() } ?: "Saved area",
@@ -130,8 +131,8 @@ object OfflineMapRepository {
 
     fun delete(context: Context, regionId: Long, callback: (Boolean) -> Unit) {
         manager(context).listOfflineRegions(object : OfflineManager.ListOfflineRegionsCallback {
-            override fun onList(offlineRegions: Array<OfflineRegion>) {
-                val match = offlineRegions.firstOrNull { it.id == regionId } ?: return callback(false)
+            override fun onList(offlineRegions: Array<OfflineRegion>?) {
+                val match = offlineRegions?.firstOrNull { it.id == regionId } ?: return callback(false)
                 match.delete(object : OfflineRegion.OfflineRegionDeleteCallback {
                     override fun onDelete() { callback(true) }
                     override fun onError(error: String) { callback(false) }
