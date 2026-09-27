@@ -676,23 +676,33 @@ private fun PremiumBottomNavigation(
         ) {
             order.forEach { index ->
                 val tab = tabs[index]
-                NavigationBarItem(selected = selectedTab == index, onClick = { onTabSelected(index) },
+                val isSelected = selectedTab == index
+                NavigationBarItem(selected = isSelected, onClick = { onTabSelected(index) },
                     icon = {
-                        if (index == 5 && chatUnreadCount > 0) {
-                            BadgedBox(badge = {
-                                Badge(containerColor = CyanGlow, contentColor = Color.Black) {
-                                    Text(if (chatUnreadCount > 99) "99+" else chatUnreadCount.toString())
-                                }
-                            }) { Icon(tab.second, null, Modifier.size(19.dp)) }
-                        } else {
-                            Icon(tab.second, null, Modifier.size(19.dp))
+                        // Neumorphic nav item: unselected tabs sit flush (no chip at all), the
+                        // selected tab gets a small INSET (pressed-in) pill behind its icon
+                        // instead of Material's flat filled indicator, so "active" reads as
+                        // depth rather than just a color change.
+                        val iconBox = Modifier
+                            .size(34.dp)
+                            .let { if (isSelected) it.neumorphicInset(CircleShape, CameraGuardPalette.Raised) else it }
+                        Box(iconBox, contentAlignment = Alignment.Center) {
+                            if (index == 5 && chatUnreadCount > 0) {
+                                BadgedBox(badge = {
+                                    Badge(containerColor = CyanGlow, contentColor = Color.Black) {
+                                        Text(if (chatUnreadCount > 99) "99+" else chatUnreadCount.toString())
+                                    }
+                                }) { Icon(tab.second, null, Modifier.size(18.dp)) }
+                            } else {
+                                Icon(tab.second, null, Modifier.size(18.dp))
+                            }
                         }
                     },
-                    label = { Text(tab.first, fontSize = 9.sp, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Medium) },
+                    label = { Text(tab.first, fontSize = 9.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = CyanGlow, selectedTextColor = CyanGlow,
                         unselectedIconColor = TextSecondary, unselectedTextColor = TextSecondary,
-                        indicatorColor = CameraGuardPalette.Raised))
+                        indicatorColor = Color.Transparent))
             }
         }
     }
@@ -993,8 +1003,8 @@ private fun NavigationScreen(modifier: Modifier, liveLocation: Location?, filter
                 }
                 if (nearbyLoading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp), color = CyanGlow)
                 if (nearbyCategory != null && !nearbyLoading) {
-                    Surface(Modifier.fillMaxWidth().padding(top = 5.dp), color = SurfaceDark, shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, PremiumLine)) {
+                    Surface(Modifier.fillMaxWidth().padding(top = 5.dp).neumorphicRaised(RoundedCornerShape(14.dp), SurfaceDark, 8.dp),
+                        color = Color.Transparent, shape = RoundedCornerShape(14.dp)) {
                         Column(Modifier.padding(8.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Nearby ${nearbyCategory}", Modifier.weight(1f), color = CyanGlow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -1678,10 +1688,10 @@ private fun LiveRidersScreen(
 
                 if (communityRiders.isEmpty()) {
                     Surface(
-                        Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
-                        color = SurfaceDark.copy(alpha = .92f),
-                        shape = RoundedCornerShape(50),
-                        border = BorderStroke(1.dp, PremiumLine)
+                        Modifier.align(Alignment.TopCenter).padding(top = 12.dp)
+                            .neumorphicRaised(RoundedCornerShape(50), SurfaceDark.copy(alpha = .92f), 8.dp),
+                        color = Color.Transparent,
+                        shape = RoundedCornerShape(50)
                     ) {
                         Text(
                             "No other riders online nearby right now",
@@ -1700,8 +1710,8 @@ private fun LiveRidersScreen(
 @Composable
 private fun PremiumDrivingDashboard(location: Location?, filteredSpeedKmh: Float) {
     val speed = if (location != null && filteredSpeedKmh > 15f) filteredSpeedKmh.roundToInt() else 0
-    Surface(shape = RoundedCornerShape(26.dp), color = SurfaceDark,
-        border = BorderStroke(1.dp, PremiumLine), shadowElevation = 10.dp) {
+    Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(26.dp), SurfaceDark, 11.dp),
+        shape = RoundedCornerShape(26.dp), color = Color.Transparent) {
         Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(66.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize()) {
@@ -1763,8 +1773,8 @@ private fun CinematicRoadScanner() {
 @Composable
 private fun PremiumCameraWarningCard(target: RealCameraTarget?, appSettings: AppSettings) {
     if (target == null) {
-        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(26.dp), color = SurfaceDark,
-            border = BorderStroke(1.dp, CameraGuardPalette.Border), shadowElevation = 10.dp) {
+        Surface(Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(26.dp), SurfaceDark, 10.dp),
+            shape = RoundedCornerShape(26.dp), color = Color.Transparent) {
             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 CinematicRoadScanner()
                 Spacer(Modifier.width(16.dp))
@@ -2286,10 +2296,9 @@ private fun LiveHudScreen(
 private fun HudDiagnosticsOverlay(events: List<HudDiagEvent>, snapshot: String, pageUrl: String, modifier: Modifier = Modifier) {
     val clipboard = LocalClipboardManager.current
     Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = CameraGuardPalette.Surface.copy(alpha = 0.94f),
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, CameraGuardPalette.Border)
+        modifier = modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(14.dp), CameraGuardPalette.Surface.copy(alpha = 0.94f), 8.dp),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(14.dp)
     ) {
         Column(Modifier.padding(14.dp).heightIn(max = 480.dp).verticalScroll(rememberScrollState())) {
             Text("HUD diagnostics", color = CameraGuardPalette.Highlight, fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -2571,7 +2580,7 @@ private fun HudArrowRoute(
 
 @Composable
 private fun RoadRadarWidget(nearby: List<Triple<RealCamera, Float, Float>>, heading: Float) {
-    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = SurfaceDark, border = BorderStroke(1.dp, PremiumLine)) {
+    Surface(Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(20.dp), SurfaceDark, 9.dp), shape = RoundedCornerShape(20.dp), color = Color.Transparent) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.RadioButtonChecked, null, Modifier.size(14.dp), tint = CyanGlow)
@@ -2614,7 +2623,7 @@ private fun RoadRadarWidget(nearby: List<Triple<RealCamera, Float, Float>>, head
 
 @Composable
 private fun HudNextCameraCard(target: RealCameraTarget?) {
-    Surface(Modifier.fillMaxWidth().fillMaxHeight(), shape = RoundedCornerShape(20.dp), color = SurfaceDark, border = BorderStroke(1.dp, PremiumLine)) {
+    Surface(Modifier.fillMaxWidth().fillMaxHeight().neumorphicRaised(RoundedCornerShape(20.dp), SurfaceDark, 9.dp), shape = RoundedCornerShape(20.dp), color = Color.Transparent) {
         Column(Modifier.padding(14.dp)) {
             Text("NEXT CAMERA", color = PremiumAccent, fontSize = 10.sp, letterSpacing = 1.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
@@ -2837,7 +2846,7 @@ private fun CameraListScreen(
 
 @Composable
 private fun PremiumMetricCard(modifier: Modifier, icon: ImageVector, title: String, value: String, accent: Color) {
-    Surface(modifier.neumorphicRaised(RoundedCornerShape(22.dp), SurfaceSoft, 8.dp), shape = RoundedCornerShape(22.dp), color = Color.Transparent, border = BorderStroke(1.dp, PremiumLine.copy(alpha=.45f))) {
+    Surface(modifier.neumorphicRaised(RoundedCornerShape(22.dp), SurfaceSoft, 8.dp), shape = RoundedCornerShape(22.dp), color = Color.Transparent) {
         Column(Modifier.padding(14.dp)) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
             Spacer(Modifier.height(12.dp))
@@ -2853,8 +2862,7 @@ private fun PremiumCameraRow(camera: RealCamera, distanceMeters: Float?, onDelet
     val accent = camera.type.premiumAccent()
     val manual = camera.source == RealCameraSource.MANUAL
     val master = camera.source == RealCameraSource.MASTER
-    Surface(Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(24.dp), SurfaceDark, 9.dp), shape = RoundedCornerShape(24.dp), color = Color.Transparent,
-        border = BorderStroke(1.dp, PremiumLine.copy(alpha=.45f))) {
+    Surface(Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(24.dp), SurfaceDark, 9.dp), shape = RoundedCornerShape(24.dp), color = Color.Transparent) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(48.dp).background(lerp(SurfaceDark, accent, .13f), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
@@ -2912,7 +2920,7 @@ private fun PremiumCameraRow(camera: RealCamera, distanceMeters: Float?, onDelet
 @Composable
 private fun AlertsCurrentApproachCard(target: RealCameraTarget?, appSettings: AppSettings) {
     if (target == null) {
-        Surface(Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(24.dp), SurfaceDark, 8.dp), shape = RoundedCornerShape(24.dp), color = Color.Transparent, border = BorderStroke(1.dp, PremiumLine.copy(alpha=.45f))) {
+        Surface(Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(24.dp), SurfaceDark, 8.dp), shape = RoundedCornerShape(24.dp), color = Color.Transparent) {
             Column(Modifier.padding(18.dp)) {
                 Text("No relevant camera on your current approach", color = TextSecondary, fontSize = 13.sp)
             }
@@ -2977,7 +2985,7 @@ private fun AlertsScreen(modifier: Modifier, activeCameraTarget: RealCameraTarge
     Column(modifier.fillMaxSize().background(AppBackground).verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
         PremiumSectionHeader("AWARENESS CENTRE", "Your alerts", "Camera warnings, tuned for your journey")
-        Surface(shape = RoundedCornerShape(22.dp), color = SurfaceDark, border = BorderStroke(1.dp, PremiumLine)) {
+        Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(22.dp), SurfaceDark, 9.dp), shape = RoundedCornerShape(22.dp), color = Color.Transparent) {
             Column(Modifier.fillMaxWidth().padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Shield, null, tint = if (appSettings.drivingModeEnabled) CyanGlow else TextSecondary)
@@ -3194,7 +3202,7 @@ private fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(18.dp)) {
         PremiumSectionHeader("PERSONALISE YOUR DRIVE", "Settings", "Your controls. Your preferred journey.")
         Text("APPEARANCE", color = PremiumAccent, fontSize = 10.sp, letterSpacing = 1.5.sp)
-        Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark, border = BorderStroke(1.dp, PremiumLine)) {
+        Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(20.dp), SurfaceDark, 9.dp), shape = RoundedCornerShape(20.dp), color = Color.Transparent) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("App theme", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text("Changes the complete CameraGuard interface while keeping text readable.", color = TextSecondary, fontSize = 11.sp)
@@ -3226,7 +3234,7 @@ private fun SettingsScreen(
                 if (enabled) showCommunityConsent = true else onCommunityModeChanged(false, settings.communityDisplayName)
             }, Modifier.weight(1f))
         }
-        Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark, border = BorderStroke(1.dp, PremiumLine)) {
+        Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(20.dp), SurfaceDark, 9.dp), shape = RoundedCornerShape(20.dp), color = Color.Transparent) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("VEHICLE PROFILE", color = PremiumAccent, fontSize = 10.sp, letterSpacing = 1.3.sp)
                 Text("Used by driving behaviour", color = TextSecondary, fontSize = 11.sp)
@@ -3259,7 +3267,7 @@ private fun SettingsScreen(
         var mapCamerasExpanded by rememberSaveable { mutableStateOf(false) }
         DropdownSectionHeader("CAMERAS ON MAP  ·  ${mapCameraTypes.size}/${RealCameraType.entries.size}", mapCamerasExpanded) { mapCamerasExpanded = !mapCamerasExpanded }
         AnimatedVisibility(mapCamerasExpanded) {
-            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark, border = BorderStroke(1.dp, PremiumLine)) {
+            Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(20.dp), SurfaceDark, 9.dp), shape = RoundedCornerShape(20.dp), color = Color.Transparent) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     RealCameraType.entries.forEach { type ->
                         Column(Modifier.fillMaxWidth().padding(vertical=4.dp)) {
@@ -3289,7 +3297,7 @@ private fun SettingsScreen(
                 AlertPreviewCard("Speed-camera warning", "Preview your speed-camera alert", Icons.Default.Speed, WarningAmber, onTestSpeedCameraWarning)
             }
         }
-        Surface(shape = RoundedCornerShape(24.dp), color = SurfaceDark, border = BorderStroke(1.dp, PremiumLine)) {
+        Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(24.dp), SurfaceDark, 10.dp), shape = RoundedCornerShape(24.dp), color = Color.Transparent) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("SPOKEN WARNINGS", color = PremiumAccent, fontSize = 10.sp, letterSpacing = 1.5.sp)
                 Text("Warning voice", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -3319,7 +3327,7 @@ private fun SettingsScreen(
                 }
             }
         }
-        Surface(shape = RoundedCornerShape(24.dp), color = SurfaceDark, border = BorderStroke(1.dp, PremiumLine)) {
+        Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(24.dp), SurfaceDark, 10.dp), shape = RoundedCornerShape(24.dp), color = Color.Transparent) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("CAMERA BACKUP", color = PremiumAccent, fontSize = 10.sp, letterSpacing = 1.5.sp)
                 Text("Keep your saved cameras close", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -3336,7 +3344,7 @@ private fun SettingsScreen(
                 }
             }
         }
-        Surface(shape = RoundedCornerShape(24.dp), color = SurfaceDark, border = BorderStroke(1.dp, PremiumLine)) {
+        Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(24.dp), SurfaceDark, 10.dp), shape = RoundedCornerShape(24.dp), color = Color.Transparent) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("DIAGNOSTICS", color = PremiumAccent, fontSize = 10.sp, letterSpacing = 1.5.sp)
                 Text("Troubleshooting log", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)

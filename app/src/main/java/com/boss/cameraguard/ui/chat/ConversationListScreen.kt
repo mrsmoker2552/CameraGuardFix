@@ -17,6 +17,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -276,9 +277,8 @@ private fun StartConversationSheet(
             )
             Spacer(Modifier.height(10.dp))
             Surface(
-                color = CameraGuardPalette.Raised,
+                color = Color.Transparent,
                 shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, CameraGuardPalette.Border),
                 modifier = Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(16.dp), CameraGuardPalette.Raised, 7.dp).clickable(onClick = onCreateGroup)
             ) {
                 Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

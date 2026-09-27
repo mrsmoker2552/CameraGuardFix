@@ -13,8 +13,8 @@ android {
         applicationId = "com.boss.cameraguard"
         minSdk = 26
         targetSdk = 36
-        versionCode = 52
-        versionName = "1.6.11"
+        versionCode = 53
+        versionName = "1.6.12"
     }
 
     signingConfigs {

@@ -153,9 +153,8 @@ fun CommunityHostScreen(
 @Composable
 private fun CommunityHeader(effectiveName: String, onlineCount: Int) {
     Surface(
-        color = CameraGuardPalette.Surface,
+        color = Color.Transparent,
         shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp),
-        border = BorderStroke(1.dp, CameraGuardPalette.Border.copy(alpha = .35f)),
         modifier = Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp), CameraGuardPalette.Surface, 12.dp)
     ) {
         Row(
@@ -221,9 +220,8 @@ private fun CommunityJoinScreen(modifier: Modifier, googleLinked: Boolean, busy:
     Box(modifier.fillMaxSize().background(CameraGuardPalette.Background), contentAlignment = Alignment.Center) {
         Card(
             modifier = Modifier.padding(22.dp).fillMaxWidth().neumorphicRaised(RoundedCornerShape(28.dp), CameraGuardPalette.Surface, 14.dp),
-            colors = CardDefaults.cardColors(containerColor = CameraGuardPalette.Surface),
-            shape = RoundedCornerShape(26.dp),
-            border = BorderStroke(1.dp, CameraGuardPalette.Border)
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            shape = RoundedCornerShape(26.dp)
         ) {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.size(70.dp).background(CameraGuardPalette.AccentContainer, CircleShape), contentAlignment = Alignment.Center) {
@@ -277,9 +275,8 @@ private fun CommunityFeedScreen(modifier: Modifier, displayName: String) {
 
     Column(modifier.padding(horizontal = 12.dp)) {
         Surface(
-            color = CameraGuardPalette.Surface,
+            color = Color.Transparent,
             shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, CameraGuardPalette.Border.copy(alpha = .45f)),
             modifier = Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(24.dp), CameraGuardPalette.Surface, 10.dp)
         ) {
             Column(Modifier.padding(12.dp)) {
@@ -330,8 +327,7 @@ private fun CommunityFeedScreen(modifier: Modifier, displayName: String) {
                     Card(
                         modifier = Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(22.dp), CameraGuardPalette.Surface, 8.dp),
                         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                        shape = RoundedCornerShape(22.dp),
-                        border = BorderStroke(1.dp, CameraGuardPalette.Border.copy(alpha = .7f))
+                        shape = RoundedCornerShape(22.dp)
                     ) {
                         Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             RiderAvatar(post.authorName.ifBlank { "Rider" }, size = 38.dp)
@@ -367,7 +363,7 @@ private fun CommunityRidersScreen(modifier: Modifier, riders: List<CommunityRide
                 modifier = Modifier.fillMaxWidth().neumorphicRaised(RoundedCornerShape(22.dp), CameraGuardPalette.Surface, 8.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 shape = RoundedCornerShape(22.dp),
-                border = BorderStroke(1.dp, if (rider.sosActive) CameraGuardPalette.Danger else CameraGuardPalette.Border.copy(alpha = .7f))
+                border = if (rider.sosActive) BorderStroke(1.5.dp, CameraGuardPalette.Danger) else null
             ) {
                 Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                     Box {
