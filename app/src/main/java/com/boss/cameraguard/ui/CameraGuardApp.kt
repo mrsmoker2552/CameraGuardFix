@@ -3102,6 +3102,141 @@ private fun CommunityRidersSection(communityRiders: List<CommunityRider>) {
     }
 }
 
+/**
+ * Free offline map area downloads (com.boss.cameraguard.data.OfflineMapRepository, MapLibre's
+ * built-in OfflineManager against the same free OpenFreeMap style already used online - no new
+ * tile provider, account or key). Purely a local cache the rider manages here; navigation,
+ * camera warnings and the HUD keep using their existing live data untouched.
+ */
+@Composable
+private fun OfflineMapsSection(liveLocation: Location?) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var areas by remember { mutableStateOf<List<com.boss.cameraguard.data.OfflineMapRepository.OfflineArea>>(emptyList()) }
+    var loadingList by remember { mutableStateOf(true) }
+    var radiusKm by remember { mutableStateOf(5.0) }
+    var areaName by remember { mutableStateOf("") }
+    var downloadPercent by remember { mutableStateOf<Int?>(null) }
+    var downloadError by remember { mutableStateOf<String?>(null) }
+    fun refresh() {
+        loadingList = true
+        com.boss.cameraguard.data.OfflineMapRepository.list(context) { areas = it; loadingList = false }
+    }
+    LaunchedEffect(Unit) { refresh() }
+    Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(24.dp), SurfaceDark, 10.dp), shape = RoundedCornerShape(24.dp), color = Color.Transparent) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("OFFLINE MAPS", color = PremiumAccent, fontSize = 10.sp, letterSpacing = 1.5.sp)
+            Text("Download map areas for use without a signal", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text("Saves the street map (not live cameras/traffic) around a chosen point so it still renders offline.", color = TextSecondary, fontSize = 11.sp)
+            OutlinedTextField(
+                value = areaName, onValueChange = { areaName = it.take(30) },
+                label = { Text("Area name (e.g. Home city)") }, singleLine = true, modifier = Modifier.fillMaxWidth()
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(5.0 to "5 km", 10.0 to "10 km", 20.0 to "20 km").forEach { (km, label) ->
+                    val chosen = radiusKm == km
+                    Surface(
+                        onClick = { radiusKm = km }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp),
+                        color = if (chosen) CyanGlow.copy(alpha = .16f) else Color.Transparent,
+                        border = BorderStroke(1.dp, if (chosen) CyanGlow else PremiumLine)
+                    ) { Text(label, Modifier.padding(vertical = 9.dp), textAlign = TextAlign.Center, color = if (chosen) CyanGlow else TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                }
+            }
+            downloadPercent?.let { percent ->
+                LinearProgressIndicator(progress = { percent / 100f }, modifier = Modifier.fillMaxWidth(), color = CyanGlow)
+                Text("Downloading… $percent%", color = TextSecondary, fontSize = 11.sp)
+            }
+            downloadError?.let { Text(it, color = DangerRed, fontSize = 11.sp) }
+            Button(
+                onClick = {
+                    val origin = liveLocation ?: run { downloadError = "Waiting for GPS to find your area."; return@Button }
+                    val name = areaName.trim().ifBlank { "Area ${areas.size + 1}" }
+                    downloadError = null; downloadPercent = 0
+                    com.boss.cameraguard.data.OfflineMapRepository.download(
+                        context, name, org.maplibre.android.geometry.LatLng(origin.latitude, origin.longitude), radiusKm,
+                        context.resources.displayMetrics.density,
+                        onProgress = { percent, _, _ -> downloadPercent = percent },
+                        onComplete = { downloadPercent = null; areaName = ""; refresh() },
+                        onError = { message -> downloadPercent = null; downloadError = message }
+                    )
+                },
+                enabled = downloadPercent == null, modifier = Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = CyanGlow, contentColor = Color.Black)
+            ) {
+                Icon(Icons.Default.Download, null); Spacer(Modifier.width(8.dp)); Text("Download area around me", fontWeight = FontWeight.Bold)
+            }
+            if (loadingList) LinearProgressIndicator(Modifier.fillMaxWidth(), color = CyanGlow)
+            else if (areas.isEmpty()) Text("No offline areas saved yet.", color = TextSecondary, fontSize = 12.sp)
+            else areas.forEach { area ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(area.name, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "${area.radiusKm.roundToInt()} km · " + (if (area.complete) com.boss.cameraguard.data.OfflineMapRepository.formatSize(area.completedSizeBytes) else "downloading…"),
+                            color = TextSecondary, fontSize = 11.sp
+                        )
+                    }
+                    IconButton(onClick = {
+                        scope.launch { com.boss.cameraguard.data.OfflineMapRepository.delete(context, area.regionId) { refresh() } }
+                    }) { Icon(Icons.Default.Delete, "Delete offline area", tint = TextSecondary) }
+                }
+            }
+        }
+    }
+}
+
+/** Manage Home/Work/saved places and clear recent-trip history (SavedPlacesRepository, on-device). */
+@Composable
+private fun SavedPlacesSection() {
+    val context = LocalContext.current
+    var home by remember { mutableStateOf(com.boss.cameraguard.data.SavedPlacesRepository.home(context)) }
+    var work by remember { mutableStateOf(com.boss.cameraguard.data.SavedPlacesRepository.work(context)) }
+    var saved by remember { mutableStateOf(com.boss.cameraguard.data.SavedPlacesRepository.savedPlaces(context)) }
+    var tripCount by remember { mutableStateOf(com.boss.cameraguard.data.SavedPlacesRepository.trips(context).size) }
+    Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(24.dp), SurfaceDark, 10.dp), shape = RoundedCornerShape(24.dp), color = Color.Transparent) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("SAVED PLACES & TRIPS", color = PremiumAccent, fontSize = 10.sp, letterSpacing = 1.5.sp)
+            Text("Home, Work and saved places", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            if (home == null && work == null && saved.isEmpty()) {
+                Text("Nothing saved yet. On the Route tab, pick a place and tap Home, Work or Save.", color = TextSecondary, fontSize = 12.sp)
+            } else {
+                home?.let { PlaceRow(Icons.Default.Home, "Home", it.name) }
+                work?.let { PlaceRow(Icons.Default.Work, "Work", it.name) }
+                saved.forEach { place ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Bookmark, null, tint = CyanGlow, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(place.name, color = TextPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        IconButton(onClick = {
+                            com.boss.cameraguard.data.SavedPlacesRepository.removeSavedPlace(context, place.name, place.lat, place.lon)
+                            saved = com.boss.cameraguard.data.SavedPlacesRepository.savedPlaces(context)
+                        }) { Icon(Icons.Default.Delete, "Remove saved place", tint = TextSecondary, modifier = Modifier.size(18.dp)) }
+                    }
+                }
+            }
+            if (tripCount > 0) {
+                Text("$tripCount recent trip${if (tripCount == 1) "" else "s"} recorded (Route tab).", color = TextSecondary, fontSize = 11.sp)
+                TextButton(onClick = {
+                    com.boss.cameraguard.data.SavedPlacesRepository.clearTrips(context)
+                    tripCount = 0
+                }) { Text("Clear trip history", fontSize = 12.sp) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaceRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, name: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = CyanGlow, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(label, color = TextSecondary, fontSize = 10.sp)
+            Text(name, color = TextPrimary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
 @Composable
 private fun SettingsScreen(
     modifier: Modifier,
@@ -3365,6 +3500,8 @@ private fun SettingsScreen(
                 }
             }
         }
+        OfflineMapsSection(liveLocation)
+        SavedPlacesSection()
         Surface(modifier = Modifier.neumorphicRaised(RoundedCornerShape(24.dp), SurfaceDark, 10.dp), shape = RoundedCornerShape(24.dp), color = Color.Transparent) {
             Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("DIAGNOSTICS", color = PremiumAccent, fontSize = 10.sp, letterSpacing = 1.5.sp)
@@ -4629,6 +4766,11 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
     var request by remember { mutableIntStateOf(0) }
     var job by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val preferences = remember { RoutePreferencesStore(context) }
+    // Free, on-device Home/Work/saved places and recent-trip history (SavedPlacesRepository).
+    var savedHome by remember { mutableStateOf(com.boss.cameraguard.data.SavedPlacesRepository.home(context)) }
+    var savedWork by remember { mutableStateOf(com.boss.cameraguard.data.SavedPlacesRepository.work(context)) }
+    var savedPlaces by remember { mutableStateOf(com.boss.cameraguard.data.SavedPlacesRepository.savedPlaces(context)) }
+    var recentTrips by remember { mutableStateOf(com.boss.cameraguard.data.SavedPlacesRepository.trips(context)) }
     fun select(details: com.boss.cameraguard.data.PlaceDetailsRepository.Details) {
         request++; job?.cancel(); busy=false
         selected=details; preview=null; alternateRoutes=emptyList(); selectedRouteOption=0; places=emptyList(); message=null; follow=false
@@ -4719,7 +4861,13 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
     if(navigating) {
         NavigationScreen(modifier, location, speed, emptyList(), emptyList(),
             sosAlerts = sosAlerts, activeCameraTarget = warning, appSettings = settings, visibleCameraTypes = emptySet(),
-            fullMap=true, onNavigationFinished={ navigating=false; preview=null; selected=null },
+            fullMap=true, onNavigationFinished={
+                (NavigationRouteRuntime.route ?: preview)?.let { finished ->
+                    com.boss.cameraguard.data.SavedPlacesRepository.recordTrip(context, finished.destinationName, finished.distanceMeters, finished.durationSeconds)
+                    recentTrips = com.boss.cameraguard.data.SavedPlacesRepository.trips(context)
+                }
+                navigating=false; preview=null; selected=null
+            },
             ownSosActive = ownSosActive, onSosPressed = onSosPressed, onSosCancelled = onSosCancelled,
             initialRouteLayers=routeLayers)
         return
@@ -4779,6 +4927,45 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
             }
             if(busy) LinearProgressIndicator(Modifier.fillMaxWidth(),color=CyanGlow)
             message?.let { Surface(color=SurfaceDark,shape=RoundedCornerShape(10.dp)){Text(it,color=TextPrimary,modifier=Modifier.padding(10.dp),fontSize=12.sp)} }
+            // Google-Maps-style Home/Work/saved shortcuts and recent-trip history
+            // (SavedPlacesRepository, free/on-device). Only shown before a destination is picked.
+            if (selected == null && query.isBlank()) {
+                if (savedHome != null || savedWork != null || savedPlaces.isNotEmpty()) {
+                    Row(Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        savedHome?.let { home -> AssistChip(onClick = { select(com.boss.cameraguard.data.PlaceDetailsRepository.Details(home.name, home.lat, home.lon)); directions() },
+                            label = { Text("Home", fontSize = 11.sp) }, leadingIcon = { Icon(Icons.Default.Home, null, Modifier.size(14.dp)) },
+                            colors = AssistChipDefaults.assistChipColors(containerColor = SurfaceDark, labelColor = TextPrimary, leadingIconContentColor = CyanGlow)) }
+                        savedWork?.let { work -> AssistChip(onClick = { select(com.boss.cameraguard.data.PlaceDetailsRepository.Details(work.name, work.lat, work.lon)); directions() },
+                            label = { Text("Work", fontSize = 11.sp) }, leadingIcon = { Icon(Icons.Default.Work, null, Modifier.size(14.dp)) },
+                            colors = AssistChipDefaults.assistChipColors(containerColor = SurfaceDark, labelColor = TextPrimary, leadingIconContentColor = CyanGlow)) }
+                        savedPlaces.forEach { place -> AssistChip(onClick = { select(com.boss.cameraguard.data.PlaceDetailsRepository.Details(place.name, place.lat, place.lon)); directions() },
+                            label = { Text(place.label.ifBlank { place.name }.take(16), fontSize = 11.sp) }, leadingIcon = { Icon(Icons.Default.Bookmark, null, Modifier.size(14.dp)) },
+                            colors = AssistChipDefaults.assistChipColors(containerColor = SurfaceDark, labelColor = TextPrimary, leadingIconContentColor = CyanGlow)) }
+                    }
+                }
+                if (recentTrips.isNotEmpty()) {
+                    Text("RECENT TRIPS", color = PremiumAccent, fontSize = 9.sp, letterSpacing = 1.2.sp, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
+                    Surface(Modifier.fillMaxWidth().heightIn(max = 220.dp), color = SurfaceDark, shape = RoundedCornerShape(14.dp), shadowElevation = 6.dp) {
+                        LazyColumn {
+                            items(recentTrips.take(6)) { trip ->
+                                Row(Modifier.fillMaxWidth().clickable {
+                                    // Recent trips only store the destination name/stats, not coordinates
+                                    // (kept minimal and privacy-light), so re-search by name to get a
+                                    // routable point rather than guessing/persisting one.
+                                    query = trip.destinationName; suggestionsDismissedFor = null; search()
+                                }.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.History, null, tint = CyanGlow, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(trip.destinationName, color = TextPrimary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text("${"%.1f".format(trip.distanceMeters/1000)} km · ${kotlin.math.ceil(trip.durationSeconds/60).toInt().coerceAtLeast(1)} min", color = TextSecondary, fontSize = 10.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         Column(Modifier.align(Alignment.BottomEnd).padding(end=14.dp,bottom=14.dp),verticalArrangement=Arrangement.spacedBy(9.dp),horizontalAlignment=Alignment.End) {
             Box {
@@ -4842,6 +5029,30 @@ private fun RouteExploreScreen(modifier: Modifier, location: Location?, speed: F
                     place.phone?.let { Text("Phone: $it",color=TextSecondary,fontSize=12.sp) }
                     place.website?.let { Text(it,color=TextSecondary,fontSize=12.sp,maxLines=2) }
                     Text("%.5f, %.5f".format(place.latitude,place.longitude),color=TextSecondary,fontSize=11.sp)
+                    // Free, on-device Home/Work/bookmark saving (SavedPlacesRepository).
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = {
+                            com.boss.cameraguard.data.SavedPlacesRepository.setHome(context, place.name, place.latitude, place.longitude)
+                            savedHome = com.boss.cameraguard.data.SavedPlacesRepository.home(context)
+                            message = "Saved as Home"
+                        }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(vertical = 6.dp), shape = RoundedCornerShape(11.dp)) {
+                            Icon(Icons.Default.Home, null, Modifier.size(14.dp)); Spacer(Modifier.width(4.dp)); Text("Home", fontSize = 11.sp)
+                        }
+                        OutlinedButton(onClick = {
+                            com.boss.cameraguard.data.SavedPlacesRepository.setWork(context, place.name, place.latitude, place.longitude)
+                            savedWork = com.boss.cameraguard.data.SavedPlacesRepository.work(context)
+                            message = "Saved as Work"
+                        }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(vertical = 6.dp), shape = RoundedCornerShape(11.dp)) {
+                            Icon(Icons.Default.Work, null, Modifier.size(14.dp)); Spacer(Modifier.width(4.dp)); Text("Work", fontSize = 11.sp)
+                        }
+                        OutlinedButton(onClick = {
+                            com.boss.cameraguard.data.SavedPlacesRepository.addSavedPlace(context, place.name, place.latitude, place.longitude)
+                            savedPlaces = com.boss.cameraguard.data.SavedPlacesRepository.savedPlaces(context)
+                            message = "Place saved"
+                        }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(vertical = 6.dp), shape = RoundedCornerShape(11.dp)) {
+                            Icon(Icons.Default.Bookmark, null, Modifier.size(14.dp)); Spacer(Modifier.width(4.dp)); Text("Save", fontSize = 11.sp)
+                        }
+                    }
                     preview?.let { route ->
                         Text("Your location → ${place.name}",color=TextSecondary,fontSize=12.sp,maxLines=2)
                         Text("${kotlin.math.ceil(route.durationSeconds/60).toInt().coerceAtLeast(1)} min · ${"%.1f".format(route.distanceMeters/1000)} km",color=CyanGlow,fontSize=23.sp,fontWeight=FontWeight.Bold)
