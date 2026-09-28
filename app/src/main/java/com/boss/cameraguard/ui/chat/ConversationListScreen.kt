@@ -178,8 +178,10 @@ fun ConversationListScreen(
                                 ?: savedName?.takeIf { it.isNotBlank() }
                                 ?: "Rider"
                         }
+                        val avatarPhotoUrl = liveRider?.photoUrl ?: profileCache[other]?.photoUrl
                         ConversationRow(
                             title = title,
+                            photoUrl = avatarPhotoUrl,
                             isGroup = conversation.type == ConversationType.GROUP,
                             online = liveRider != null,
                             preview = conversation.lastMessageText ?: "No messages yet",
@@ -206,6 +208,7 @@ fun ConversationListScreen(
 @Composable
 private fun ConversationRow(
     title: String,
+    photoUrl: String? = null,
     isGroup: Boolean,
     online: Boolean,
     preview: String,
@@ -229,7 +232,7 @@ private fun ConversationRow(
                     Box(Modifier.size(46.dp).background(CameraGuardPalette.AccentContainer, CircleShape), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Groups, null, tint = CameraGuardPalette.Accent)
                     }
-                } else RiderAvatar(title, size = 46.dp)
+                } else RiderAvatar(title, size = 46.dp, photoUrl = photoUrl)
                 if (!isGroup && online) {
                     Box(
                         Modifier.align(Alignment.BottomEnd).size(13.dp)
@@ -297,7 +300,7 @@ private fun StartConversationSheet(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Box {
-                            RiderAvatar(rider.displayName, size = 38.dp)
+                            RiderAvatar(rider.displayName, size = 38.dp, photoUrl = rider.photoUrl)
                             Box(
                                 Modifier.align(Alignment.BottomEnd).size(11.dp)
                                     .background(CameraGuardPalette.Surface, CircleShape).padding(2.dp)

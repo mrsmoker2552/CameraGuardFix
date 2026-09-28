@@ -119,6 +119,20 @@ html,body{background:var(--cg-midnight);color:var(--cg-text)}
 </style><style id="cg-native-minimap-handoff">
 /* The HUD mini-map is now native MapLibre (Compose overlay), using the same vector source as Main Map. */
 #mini3d,.mini-tools{display:none!important}
+</style><style id="cg-sunlight-readability-pass">
+/* Outdoor/sunlight contrast pass. Safety-critical warning colours stay untouched (same
+   rule the rest of this file and the native app already follow); this only brightens
+   secondary labels that were genuinely low-contrast small text, and fixes the "Map"
+   wordmark span, which had no light-mode override at all and stayed a pale cyan on a
+   near-white background - unreadable outdoors in Light Mode specifically. */
+.speed .speed-readout small{color:#cfe3f0!important}
+.heading .heading-label{color:#d3e8f6!important}
+.roadname small{color:#cfe0ee!important}
+html[data-theme="light"] .cg-smokers-brand strong span{color:#0b5f96!important}
+html[data-theme="light"] .cg-hud-footer-logo small{color:#0b5f96!important}
+/* A touch more opaque so button labels stay legible over a bright scene behind them. */
+.hudbtn,#routeToggle,.hud>#camResetBtn{background:#0e2f4bd6!important}
+html[data-theme="light"] .hudbtn,html[data-theme="light"] .mini-tools #routeToggle,html[data-theme="light"] .hud>#camResetBtn{background:#ffffffe8!important}
 </style></head><body><main class="hud" aria-label="CameraGuard HUD visual demo"><svg class="scene" viewBox="0 0 390 850" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="road" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#101e2b"/><stop offset=".45" stop-color="#1b3043"/><stop offset="1" stop-color="#263d51"/></linearGradient><linearGradient id="blue" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#081D56"/><stop offset=".28" stop-color="#2D7DBA"/><stop offset=".85" stop-color="#0bb4fa"/><stop offset="1" stop-color="#62AAE5"/></linearGradient><linearGradient id="fade" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#040521" stop-opacity="0"/><stop offset="1" stop-color="#040521" stop-opacity=".5"/></linearGradient><filter id="glow"><feGaussianBlur stdDeviation="8"/></filter></defs><path class="road" d="M207 260 L183 260 -95 850 485 850Z"/><path d="M207 260 L-95 850 M183 260 L485 850" fill="none" stroke="#8195a6" stroke-opacity=".36" stroke-width="2"/><path d="M206 260 L-25 850 M184 260 L415 850" fill="none" stroke="#91a2af" stroke-opacity=".19" stroke-width="1"/><path d="M195 265 L159 850 L241 850Z" fill="#62AAE5" opacity=".35" filter="url(#glow)"/><path class="blue" d="M195 265 L158 850 L242 850Z"/><path d="M195 265 L158 850 L242 850Z" fill="url(#fade)" opacity=".35"/><path d="M0 850 H390" stroke="#152435" stroke-width="12"/></svg>
 <header class="header"><svg class="shield" viewBox="0 0 45 55"><path fill="#62AAE5" d="M22 1 43 10v18c0 13-8 21-21 27C9 49 1 41 1 28V10Z"/><path fill="#9ACAF0" d="M22 6 37 13v15c0 10-6 17-15 22Z"/></svg><div class="brand cg-smokers-brand" aria-label="Smoker’s Map"><strong>Smoker’s <span>Map</span></strong><small>DRIVE SAFE · STAY ALERT</small></div><div class="live"><i class="dot"></i>GPS Live</div></header>
 <button id="cgGpsDebugToggle" type="button">GPS DEBUG</button>
@@ -981,27 +995,43 @@ window.__cgTurnDebug=()=>({activeTurnSide,lastTurnDirection,left:turnLightMats.l
 // pose, so nobody who never touches the view sees any change at all.
 const CAM_BASE_EYE=new THREE.Vector3(0,34,50), CAM_BASE_TARGET=new THREE.Vector3(0,0,-44);
 const CAM_ZOOM_MIN=0.55, CAM_ZOOM_MAX=1.85;
-let camOrbitDeg=0, camZoom=1;
+// Pitch range in degrees, added on top of the base eye/target elevation. Negative =
+// flatter view (camera rises toward the road's own height -> smaller scooter, much more
+// road visible ahead). Positive = steeper/closer view (more top-down -> closer scooter,
+// less road ahead). Kept well short of +/-90 deg so the rig can never flip over the top.
+const CAM_PITCH_MIN=-16, CAM_PITCH_MAX=22;
+let camOrbitDeg=0, camZoom=1, camPitchDeg=0;
+// Rotates a vector's azimuth (around Y) and elevation by the same delta a second vector
+// would get, so eye and target can be rotated together as one rigid rig (see below) -
+// this is the pitch/tilt generalisation of the yaw-only rotY that orbit already used.
+function sphericalRotate(v,yawDeltaRad,pitchDeltaRad){
+ const r=v.length();if(r<1e-6)return v.clone();
+ const az=Math.atan2(v.x,v.z)+yawDeltaRad;
+ const el=Math.asin(THREE.MathUtils.clamp(v.y/r,-1,1))+pitchDeltaRad;
+ return new THREE.Vector3(r*Math.cos(el)*Math.sin(az), r*Math.sin(el), r*Math.cos(el)*Math.cos(az));
+}
 function updateHudCamera(){
- // Orbit and zoom pivot on the scooter's own position (the world origin the rider/road
- // scene is built around), NOT on the distant forward look-ahead point. Orbiting around
- // that far point would swing the near camera eye through a huge arc for only a small
- // change in viewing angle at the scooter, sweeping the scooter itself straight out of
- // frame. Rotating the base eye AND base target together around the scooter keeps the
- // scooter centred at every orbit angle, exactly like turning around a fixed subject.
- const rad=THREE.MathUtils.degToRad(camOrbitDeg);
- const cosA=Math.cos(rad), sinA=Math.sin(rad);
- function rotY(v){return new THREE.Vector3(v.x*cosA+v.z*sinA, v.y, -v.x*sinA+v.z*cosA);}
- const eyeRotated=rotY(CAM_BASE_EYE).multiplyScalar(camZoom);
- const targetRotated=rotY(CAM_BASE_TARGET);
+ // Orbit/pitch/zoom all pivot on the scooter's own position (the world origin the
+ // rider/road scene is built around), NOT on the distant forward look-ahead point.
+ // Rotating around that far point would swing the near camera eye through a huge arc
+ // for only a small change in viewing angle at the scooter, sweeping the scooter
+ // itself straight out of frame. Rotating the base eye AND base target together
+ // (same yaw delta, same pitch delta) keeps the scooter centred at every angle,
+ // exactly like orbiting/tilting around a fixed subject.
+ const yawRad=THREE.MathUtils.degToRad(camOrbitDeg);
+ const pitchRad=THREE.MathUtils.degToRad(camPitchDeg);
+ const eyeRotated=sphericalRotate(CAM_BASE_EYE,yawRad,pitchRad).multiplyScalar(camZoom);
+ const targetRotated=sphericalRotate(CAM_BASE_TARGET,yawRad,pitchRad);
  roadCamera.position.copy(eyeRotated);
  roadCamera.lookAt(targetRotated);
  roadCamera.fov=54;roadCamera.updateProjectionMatrix();
  const resetBtn=document.getElementById('camResetBtn');
- if(resetBtn)resetBtn.hidden=(Math.abs(camOrbitDeg)<0.5&&Math.abs(camZoom-1)<0.02);
+ if(resetBtn)resetBtn.hidden=(Math.abs(camOrbitDeg)<0.5&&Math.abs(camZoom-1)<0.02&&Math.abs(camPitchDeg)<0.5);
 }
 updateHudCamera();
-// Visual-only HUD camera controls: one-finger drag orbits the view, pinch zooms it, and the
+window.__cgCamDebug=()=>({camOrbitDeg,camZoom,camPitchDeg});
+// Visual-only HUD camera controls: one-finger drag orbits (horizontal) and pitches/tilts
+// (vertical) the view, pinch zooms it, and the
 // RESET VIEW button (or a double-tap) restores the default pose. None of this touches GPS
 // coordinates, route geometry, the destination or navigation state - only where this one
 // camera is standing while it looks at that unchanged scene.
@@ -1009,22 +1039,29 @@ const roadTouch=document.getElementById('road3d');
 roadTouch.style.pointerEvents='auto';roadTouch.style.touchAction='none';
 (function(){
  const pointers=new Map();
- let dragLastX=null,pinchStartDist=null,pinchStartZoom=1,lastTapAt=0,gestureMoved=false;
+ let dragLastX=null,dragLastY=null,pinchStartDist=null,pinchStartZoom=1,lastTapAt=0,gestureMoved=false;
  function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
- function resetView(){camOrbitDeg=0;camZoom=1;updateHudCamera();}
+ function resetView(){camOrbitDeg=0;camZoom=1;camPitchDeg=0;updateHudCamera();}
  roadTouch.addEventListener('pointerdown',e=>{
   roadTouch.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   gestureMoved=false;
-  if(pointers.size===1){dragLastX=e.clientX;}
-  else if(pointers.size===2){const pts=[...pointers.values()];pinchStartDist=dist(pts[0],pts[1]);pinchStartZoom=camZoom;dragLastX=null;}
+  if(pointers.size===1){dragLastX=e.clientX;dragLastY=e.clientY;}
+  else if(pointers.size===2){const pts=[...pointers.values()];pinchStartDist=dist(pts[0],pts[1]);pinchStartZoom=camZoom;dragLastX=null;dragLastY=null;}
  });
  roadTouch.addEventListener('pointermove',e=>{
   if(!pointers.has(e.pointerId))return;
   pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pointers.size===1&&dragLastX!==null){
-   const dx=e.clientX-dragLastX;
-   if(Math.abs(dx)>1){gestureMoved=true;camOrbitDeg=(camOrbitDeg-dx*0.35+360)%360;dragLastX=e.clientX;updateHudCamera();}
+   const dx=e.clientX-dragLastX,dy=e.clientY-(dragLastY??e.clientY);
+   if(Math.abs(dx)>1||Math.abs(dy)>1){
+    gestureMoved=true;
+    camOrbitDeg=(camOrbitDeg-dx*0.35+360)%360;
+    // Drag down -> steeper/closer view (more top-down, less road ahead); drag up ->
+    // flatter view (camera rises toward road height, much more road visible ahead).
+    camPitchDeg=THREE.MathUtils.clamp(camPitchDeg+dy*0.22,CAM_PITCH_MIN,CAM_PITCH_MAX);
+    dragLastX=e.clientX;dragLastY=e.clientY;updateHudCamera();
+   }
   }else if(pointers.size===2&&pinchStartDist){
    const pts=[...pointers.values()];const d=dist(pts[0],pts[1]);
    if(Math.abs(d-pinchStartDist)>2){
@@ -1038,7 +1075,7 @@ roadTouch.style.pointerEvents='auto';roadTouch.style.touchAction='none';
  function endPointer(e){
   pointers.delete(e.pointerId);
   if(pointers.size<2)pinchStartDist=null;
-  if(pointers.size===1){const only=[...pointers.values()][0];dragLastX=only.x;}
+  if(pointers.size===1){const only=[...pointers.values()][0];dragLastX=only.x;dragLastY=only.y;}
   else if(pointers.size===0){
    dragLastX=null;
    if(!gestureMoved){

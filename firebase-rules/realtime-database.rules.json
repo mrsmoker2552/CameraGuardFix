@@ -9,6 +9,7 @@
         ".validate": "newData.hasChildren(['displayName', 'communityEnabled'])",
         "displayName": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
         "communityEnabled": { ".validate": "newData.isBoolean()" },
+        "photoUrl": { ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().beginsWith('https://')" },
         "$other": { ".validate": false }
       }
     },
@@ -26,6 +27,7 @@
         "moving": { ".validate": "newData.isBoolean()" },
         "cell": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 32" },
         "lastSeen": { ".validate": "newData.isNumber()" },
+        "photoUrl": { ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().beginsWith('https://')" },
         "$other": { ".validate": false }
       }
     },

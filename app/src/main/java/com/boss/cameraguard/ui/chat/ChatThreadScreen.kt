@@ -192,7 +192,7 @@ fun ChatThreadScreen(
                     ) {
                         if (isGroup) Box(Modifier.size(34.dp).background(CameraGuardPalette.AccentContainer, CircleShape), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Groups, contentDescription = null, tint = CameraGuardPalette.Accent, modifier = Modifier.size(18.dp))
-                        } else RiderAvatar(title, size = 34.dp)
+                        } else RiderAvatar(title, size = 34.dp, photoUrl = otherProfile?.photoUrl)
                         Column {
                             Text(title, color = CameraGuardPalette.Text, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             if (isGroup) Text("${conversation.memberUids.size} members", color = CameraGuardPalette.Muted, fontSize = 10.sp)

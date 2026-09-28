@@ -13,6 +13,7 @@ import android.webkit.WebViewClient
 import android.webkit.WebResourceRequest
 import android.webkit.JavascriptInterface
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import org.json.JSONObject
 import android.app.Activity
 import android.content.Context
@@ -359,7 +360,11 @@ fun CameraGuardApp(
     onSosCancelled: () -> Unit = {},
     onVoicePresetChanged: (Int) -> Unit = {},
     hudModeActive: Boolean = false,
-    onHudModeChanged: (Boolean) -> Unit = {}
+    onHudModeChanged: (Boolean) -> Unit = {},
+    // Tap target for a rider-message notification - see MainActivity.handleChatNotificationIntent
+    // and ChatNotifier.postChatNotification. Mirrors sosFocusAlert/sosFocusRequest just above.
+    chatOpenConversationId: String? = null,
+    chatOpenRequest: Int = 0
 ) {
 
     var activeTab by rememberSaveable {
@@ -368,6 +373,13 @@ fun CameraGuardApp(
     var hudMirrorMode by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(sosFocusRequest) {
         if (sosFocusRequest > 0) activeTab = 0
+    }
+    var pendingChatConversationId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(chatOpenRequest) {
+        if (chatOpenRequest > 0 && chatOpenConversationId != null) {
+            pendingChatConversationId = chatOpenConversationId
+            activeTab = 5
+        }
     }
     val appContext = LocalContext.current
     val cameraMapFilterStore = remember(appContext) { com.boss.cameraguard.data.CameraMapFilterStore(appContext) }
@@ -547,6 +559,8 @@ fun CameraGuardApp(
                     communityRiders = communityRiders,
                     pendingDirectTargetUid = pendingDirectTargetUid,
                     onPendingDirectTargetHandled = { pendingDirectTargetUid = null },
+                    pendingChatConversationId = pendingChatConversationId,
+                    onPendingChatConversationIdHandled = { pendingChatConversationId = null },
                     onCommunityJoined = { name -> onCommunityModeChanged(true, name) }
                 )
             }
@@ -1018,7 +1032,11 @@ private fun NavigationScreen(modifier: Modifier, liveLocation: Location?, filter
         )
 
         val currentWeather by rememberCurrentWeather(liveLocation)
-        WeatherChip(currentWeather, Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 10.dp))
+        // zIndex is required here: this Box paints children in declaration order, and the
+        // "CameraGuard / ROUTE" title header further below is a full-width Column with its
+        // own gradient background, declared after this chip - without an explicit zIndex it
+        // paints on top and visually buries the temperature card whenever fullMap is true.
+        WeatherChip(currentWeather, Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 10.dp).zIndex(5f))
 
         if (fullMap) {
             Column(Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 237.dp),
@@ -2307,45 +2325,54 @@ private fun LiveHudScreen(
             if (!hudMiniRouteEnabled) emptyList() else NavigationRouteRuntime.route?.takeIf { it.active }?.points
                 ?.map { org.maplibre.android.geometry.LatLng(it.latitude, it.longitude) } ?: emptyList()
         }
+        // Perfect circle: a single diameter (not independent width/height) so the map
+        // itself is never clipped into an oval. The circular clip lives on an INNER box;
+        // the ROUTE ON/OFF toggle sits in the outer, unclipped box so it isn't cut off by
+        // the round corners (a corner-pinned button would land outside a circular mask).
+        val hudMiniMapDiameter = maxWidth * 0.40f
         Box(
             Modifier.align(Alignment.TopStart)
                 .offset(x = maxWidth * 0.03f, y = maxHeight * 0.105f)
-                .width(maxWidth * 0.59f)
-                .height(maxHeight * 0.23f)
-                .clip(RoundedCornerShape(18.dp))
+                .size(hudMiniMapDiameter)
         ) {
-            RealMapView(
-                modifier = Modifier.fillMaxSize(),
-                liveLocation = liveLocation,
-                realCameras = emptyList(),
-                communityRiders = emptyList(),
-                followMode = true,
-                recenterRequest = 0,
-                onManualMapMove = {},
-                routePoints = hudMiniRoutePoints,
-                compactUserMarker = true,
-                roadsOnly = true,
-                miniMapMode = true,
-                darkTheme = appSettings.themeMode == AppThemeMode.DARK
-            )
-            Canvas(Modifier.matchParentSize()) {
-                drawRect(
-                    brush = Brush.radialGradient(
-                        colorStops = arrayOf(
-                            0.0f to CyanGlow.copy(alpha = 0.16f),
-                            0.34f to CyanGlow.copy(alpha = 0.08f),
-                            0.52f to Color.Transparent,
-                            0.78f to AppBackground.copy(alpha = 0.46f),
-                            1.0f to AppBackground.copy(alpha = 0.96f)
-                        ),
-                        center = center,
-                        radius = size.minDimension * 0.72f
-                    )
+            Box(Modifier.matchParentSize().clip(CircleShape)) {
+                RealMapView(
+                    modifier = Modifier.fillMaxSize(),
+                    liveLocation = liveLocation,
+                    realCameras = emptyList(),
+                    communityRiders = emptyList(),
+                    followMode = true,
+                    recenterRequest = 0,
+                    onManualMapMove = {},
+                    routePoints = hudMiniRoutePoints,
+                    compactUserMarker = true,
+                    roadsOnly = true,
+                    miniMapMode = true,
+                    darkTheme = appSettings.themeMode == AppThemeMode.DARK
                 )
+                // A radial-only vignette (no corner rectangle left over) - the surrounding
+                // square around the circle stays fully transparent since nothing is drawn
+                // there at all now; roads/route/current-location stay readable at the
+                // center where the vignette is lightest.
+                Canvas(Modifier.matchParentSize()) {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colorStops = arrayOf(
+                                0.0f to CyanGlow.copy(alpha = 0.14f),
+                                0.40f to CyanGlow.copy(alpha = 0.05f),
+                                0.62f to Color.Transparent,
+                                0.85f to AppBackground.copy(alpha = 0.40f),
+                                1.0f to AppBackground.copy(alpha = 0.90f)
+                            ),
+                            center = center,
+                            radius = size.minDimension * 0.5f
+                        )
+                    )
+                }
             }
             TextButton(
                 onClick = { hudMiniRouteEnabled = !hudMiniRouteEnabled },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp),
+                modifier = Modifier.align(Alignment.BottomCenter).offset(y = 16.dp),
                 colors = ButtonDefaults.textButtonColors(containerColor = SurfaceDark.copy(alpha = .92f), contentColor = CyanGlow),
                 contentPadding = PaddingValues(horizontal = 9.dp, vertical = 3.dp)
             ) { Text(if (hudMiniRouteEnabled) "ROUTE ON" else "ROUTE OFF", fontSize = 9.sp, fontWeight = FontWeight.Bold) }
@@ -4741,6 +4768,31 @@ private fun rememberVoiceGuidance(): VoiceGuidance {
     return remember(speaker) { VoiceGuidance(speaker, enabled, ready) }
 }
 
+/**
+ * True only for maneuvers a rider actually needs a heads-up for: turns (incl. slight/
+ * sharp), forks, roundabout entry/exit, necessary keep-left/right, and U-turns. Filters
+ * out routing-engine "steps" that exist only because a road's name changed while
+ * continuing essentially straight - those used to be spoken exactly like a real turn.
+ */
+private fun isImportantManeuverInstruction(instruction: String): Boolean {
+    val t = instruction.lowercase()
+    if (t.contains("arrive") || t.contains("destination")) return true
+    if (t.contains("roundabout")) return true
+    if (t.contains("u-turn") || t.contains("uturn") || t.contains("u turn")) return true
+    if (t.contains("fork")) return true
+    if (t.contains("merge")) return true
+    if (t.contains("keep left") || t.contains("keep right")) return true
+    if (t.contains("left") || t.contains("right")) return true
+    return false
+}
+
+/** Drops the trailing "onto <road name>" clause so a mid-distance callout doesn't repeat
+ *  the road name that will be spoken again, in full, on the close/"now" callout. */
+private fun shortManeuverPhrase(instruction: String): String {
+    val ontoIndex = instruction.indexOf(" onto ")
+    return if (ontoIndex > 0) instruction.substring(0, ontoIndex) else instruction
+}
+
 /** Polls the shared route runtime (a plain volatile, not Compose state) and speaks upcoming turns. */
 @Composable
 private fun SpeakRouteGuidance(voice: VoiceGuidance, active: Boolean, liveLocation: Location?) {
@@ -4773,21 +4825,30 @@ private fun SpeakRouteGuidance(voice: VoiceGuidance, active: Boolean, liveLocati
         }
         val instruction = current.nextInstruction.trim()
         if (instruction.isBlank() || instruction == "Continue to destination") return@LaunchedEffect
+        // Only speak maneuvers that actually matter for a rider's next action. Routing
+        // engines emit a "step" for every named-road change even with no real turn
+        // (e.g. the road simply changes name while going straight); those used to be
+        // announced just like a real turn, three times each. Keep only genuine turns,
+        // forks, roundabouts, necessary keep-left/right and U-turns; a real arrival
+        // still comes through the destination-reached path below, not this classifier.
+        if (!isImportantManeuverInstruction(instruction)) return@LaunchedEffect
         val nextMeters = current.nextTurnMeters
+        // Two advance callouts instead of three, and the road name is spoken only
+        // once - on the close/final callout - instead of being repeated verbatim at
+        // every distance band. This directly cuts the "duplicate instructions" /
+        // "constant road-name repetition" complaint without losing safe advance warning.
         val band = when {
-            nextMeters <= 35.0 -> "now"
-            nextMeters <= 120.0 -> "near"
-            nextMeters <= 450.0 -> "approach"
+            nextMeters <= 40.0 -> "now"
+            nextMeters <= 180.0 -> "near"
             else -> null
         } ?: return@LaunchedEffect
         val key = "$instruction:$band"
         if (spokenMilestones.add(key)) {
-            val intro = when (band) {
-                "now" -> "Now, "
-                "near" -> "In ${nextMeters.roundToInt()} meters, "
-                else -> "In about ${((nextMeters / 50.0).roundToInt() * 50).coerceAtLeast(50)} meters, "
+            val phrase = when (band) {
+                "now" -> "Now, $instruction"
+                else -> "In ${nextMeters.roundToInt()} meters, ${shortManeuverPhrase(instruction)}"
             }
-            voice.speaker.speak(intro + instruction)
+            voice.speaker.speak(phrase)
         }
     }
     LaunchedEffect(route?.active, voice.enabled.value) {
@@ -4833,14 +4894,14 @@ private fun rememberCurrentWeather(location: Location?): State<com.boss.cameragu
 private fun WeatherChip(weather: com.boss.cameraguard.data.CurrentWeather?, modifier: Modifier = Modifier) {
     if (weather == null) return
     Surface(
-        modifier = modifier.neumorphicRaised(RoundedCornerShape(14.dp), SurfaceDark, 6.dp),
-        color = Color.Transparent, shape = RoundedCornerShape(14.dp)
+        modifier = modifier.neumorphicRaised(RoundedCornerShape(16.dp), SurfaceDark, 7.dp),
+        color = Color.Transparent, shape = RoundedCornerShape(16.dp)
     ) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(weather.glyph, fontSize = 15.sp)
-            Column {
-                Text("${weather.temperatureC.roundToInt()}°C", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                Text(weather.summary, color = TextSecondary, fontSize = 9.sp, maxLines = 1)
+        Row(Modifier.padding(horizontal = 13.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(weather.glyph, fontSize = 20.sp)
+            Column(horizontalAlignment = Alignment.Start) {
+                Text("${weather.temperatureC.roundToInt()}°C", color = TextPrimary, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                Text(weather.summary, color = TextSecondary, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

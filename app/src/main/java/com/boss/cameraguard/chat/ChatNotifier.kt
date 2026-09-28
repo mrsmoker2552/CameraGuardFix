@@ -45,12 +45,13 @@ fun postChatNotification(context: Context, conversationId: String, title: String
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
         ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
     ) return
-    // Brings CameraGuard to the foreground; it does not deep-link straight into this
-    // conversation's thread (that would need MainActivity's onNewIntent/launch handling
-    // reworked, which this change intentionally leaves untouched). The rider lands wherever
-    // they left the app and taps the Chat tab, whose unread badge points them to it.
+    // Deep-links straight into this conversation's thread: MainActivity's
+    // handleChatNotificationIntent() reads EXTRA_CHAT_CONVERSATION_ID (on both onCreate and
+    // onNewIntent, matching the existing SOS-notification tap pattern) and CameraGuardApp
+    // switches to the Community tab and opens the conversation.
     val openIntent = android.content.Intent(context, MainActivity::class.java).apply {
         flags = android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+        putExtra(MainActivity.EXTRA_CHAT_CONVERSATION_ID, conversationId)
     }
     val pendingIntent = PendingIntent.getActivity(
         context, conversationId.hashCode(), openIntent,

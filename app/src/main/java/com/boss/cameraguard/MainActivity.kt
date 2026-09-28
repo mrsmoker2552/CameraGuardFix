@@ -120,6 +120,13 @@ class MainActivity : ComponentActivity() {
     private var pendingSosFocus by mutableStateOf<SosAlert?>(null)
     private var sosFocusRequest by mutableIntStateOf(0)
 
+    // Tap-to-open target for a rider-message notification (Task: Community message
+    // notifications). Mirrors the pendingSosFocus/sosFocusRequest pattern immediately above:
+    // a plain counter bump so CameraGuardApp's LaunchedEffect(chatOpenRequest) fires even if
+    // the same conversation id is tapped twice in a row.
+    private var pendingChatOpenConversationId by mutableStateOf<String?>(null)
+    private var chatOpenRequest by mutableIntStateOf(0)
+
     /*
      * Nearby-rider read side of the community feature. Presence publishing
      * (writing our own location) already existed; this adds the missing
@@ -369,6 +376,7 @@ class MainActivity : ComponentActivity() {
 
         ensureFirebaseSession()
         handleSosNotificationIntent(intent)
+        handleChatNotificationIntent(intent)
 
         manualCameras =
             manualCameraStore.load()
@@ -601,6 +609,9 @@ class MainActivity : ComponentActivity() {
                     sosFocusRequest = sosFocusRequest,
                     onSosPressed = { publishSosAlert() },
                     onSosCancelled = { cancelOwnSosAlert() },
+
+                    chatOpenConversationId = pendingChatOpenConversationId,
+                    chatOpenRequest = chatOpenRequest,
 
                     onVoicePresetChanged = { preset ->
                         settingsStore.setVoicePreset(preset)
@@ -1100,6 +1111,31 @@ class MainActivity : ComponentActivity() {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val now = System.currentTimeMillis()
                 val fresh = mutableListOf<SosAlert>()
+                // Free-tier SOS delivery: there is no FCM/Cloud-Function backend in this
+                // project (would require a billing account even to stay within free
+                // usage), so this remains an RTDB listener - it only fires while this
+                // device's app process is alive with a live connection (foreground or
+                // simply backgrounded-but-not-killed; torn down only in onDestroy, see
+                // stopSosListener() call sites). A fully killed app or a device that
+                // hasn't opened CameraGuard recently cannot be woken by this, and that
+                // is a genuine, documented limitation of staying free-only.
+                //
+                // What IS newly enforced here, for free, entirely client-side: the
+                // 10 km eligibility radius from the spec. Every community-enabled
+                // client used to be notified of every SOS worldwide (no distance check
+                // existed at all); each recipient now computes its own distance to the
+                // alert using its own last-known location and only notifies itself
+                // when within range and that location is recent enough to trust.
+                val myLocation = currentLocation
+                val myLocationFresh = myLocation != null &&
+                    (now - myLocation.time) in 0L..SOS_LOCATION_MAX_AGE_MS
+                // Spec requires SOS recipients to be Google-authenticated specifically
+                // (basic presence/SOS otherwise also works for an anonymous guest
+                // session - unchanged for sending/being visible - this only narrows
+                // who gets notified).
+                val selfUser = FirebaseAuth.getInstance().currentUser
+                val selfGoogleLinked = selfUser != null && !selfUser.isAnonymous &&
+                    selfUser.providerData.any { it.providerId == "google.com" }
                 snapshot.children.forEach { child ->
                     val uid = child.key ?: return@forEach
                     val name = child.child("displayName").getValue(String::class.java) ?: "Rider"
@@ -1112,8 +1148,13 @@ class MainActivity : ComponentActivity() {
                     if (!alert.isFresh(now)) return@forEach
                     fresh += alert
                     if (uid != selfUid) {
-                        val eventKey = "$uid:$createdAt"
-                        if (seenSosEvents.add(eventKey)) SosNotifier.post(this@MainActivity, alert)
+                        val withinRadius = selfGoogleLinked && myLocationFresh && communityDistanceMeters(
+                            myLocation!!.latitude, myLocation.longitude, lat, lon
+                        ) <= SOS_NOTIFY_RADIUS_METERS
+                        if (withinRadius) {
+                            val eventKey = "$uid:$createdAt"
+                            if (seenSosEvents.add(eventKey)) SosNotifier.post(this@MainActivity, alert)
+                        }
                     }
                 }
                 sosAlerts = fresh.sortedByDescending { it.createdAtMillis }
@@ -1191,6 +1232,16 @@ class MainActivity : ComponentActivity() {
         sosFocusRequest++
     }
 
+    /** Tap target for a rider-message notification (see ChatNotifier.postChatNotification) -
+     *  jumps straight to the tapped conversation instead of just bringing the app to the
+     *  foreground. Same shape as handleSosNotificationIntent above. */
+    private fun handleChatNotificationIntent(source: Intent?) {
+        source ?: return
+        val conversationId = source.getStringExtra(EXTRA_CHAT_CONVERSATION_ID) ?: return
+        pendingChatOpenConversationId = conversationId
+        chatOpenRequest++
+    }
+
     @Deprecated("Compatibility bridge for the legacy Google Sign-In fallback used when Credential Manager is unavailable")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (CameraGuardAuthManager.handleActivityResult(requestCode, resultCode, data)) return
@@ -1201,6 +1252,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleSosNotificationIntent(intent)
+        handleChatNotificationIntent(intent)
     }
 
     private fun publishRoadReport(reportType: String) {
@@ -1278,14 +1330,26 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun writeCommunityProfile(enabled: Boolean) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val selfUser = FirebaseAuth.getInstance().currentUser ?: return
+        val uid = selfUser.uid
         val name = appSettings.communityDisplayName.trim().take(40)
         if (name.isBlank()) return
 
-        val profile = mapOf<String, Any>(
+        // Free-only avatar: only ever the URL Google already hosts for this account's
+        // photo, never anything CameraGuard uploads or stores itself. See the doc
+        // comment on CommunityRider.photoUrl for why this is free.
+        val googlePhotoUrl =
+            if (!selfUser.isAnonymous && selfUser.providerData.any { it.providerId == "google.com" }) {
+                selfUser.photoUrl?.toString()
+            } else {
+                null
+            }
+
+        val profile = mutableMapOf<String, Any>(
             "displayName" to name,
             "communityEnabled" to enabled
         )
+        if (googlePhotoUrl != null) profile["photoUrl"] = googlePhotoUrl
 
         communityDatabase.reference
             .child("users")
@@ -1353,6 +1417,17 @@ class MainActivity : ComponentActivity() {
         // still not the raw GPS fix, but close enough for another rider's marker to be useful.
         val coarseLat = (floor(location.latitude / COMMUNITY_DISPLAY_PRECISION_DEGREES) + 0.5) * COMMUNITY_DISPLAY_PRECISION_DEGREES
         val coarseLon = (floor(location.longitude / COMMUNITY_DISPLAY_PRECISION_DEGREES) + 0.5) * COMMUNITY_DISPLAY_PRECISION_DEGREES
+        // Free-only avatar: republishes the Google-hosted account photo URL only - see
+        // CommunityRider.photoUrl doc comment and writeCommunityProfile() above.
+        val selfUserForPhoto = FirebaseAuth.getInstance().currentUser
+        val presenceGooglePhotoUrl =
+            if (selfUserForPhoto != null && !selfUserForPhoto.isAnonymous &&
+                selfUserForPhoto.providerData.any { it.providerId == "google.com" }
+            ) {
+                selfUserForPhoto.photoUrl?.toString()
+            } else {
+                null
+            }
         val presence = hashMapOf<String, Any>(
             "displayName" to appSettings.communityDisplayName.trim().take(40),
             "latitude" to coarseLat,
@@ -1369,6 +1444,7 @@ class MainActivity : ComponentActivity() {
             "cell" to cell,
             "lastSeen" to ServerValue.TIMESTAMP
         )
+        if (presenceGooglePhotoUrl != null) presence["photoUrl"] = presenceGooglePhotoUrl
         // Never publish exact coordinates to /presence.
         val privatePresence = mapOf<String, Any>(
             "latitude" to location.latitude,
@@ -1523,6 +1599,7 @@ class MainActivity : ComponentActivity() {
                         val lastSeen = child.child("lastSeen").getValue(Long::class.java) ?: 0L
                         val riderCell = child.child("cell").getValue(String::class.java) ?: cell
                         val roadName = child.child("roadName").getValue(String::class.java)
+                        val photoUrl = child.child("photoUrl").getValue(String::class.java)
                         val isFresh =
                             System.currentTimeMillis() - lastSeen <=
                                 COMMUNITY_PRESENCE_STALE_MILLIS
@@ -1561,7 +1638,8 @@ class MainActivity : ComponentActivity() {
                                 lastSeenMillis = lastSeen,
                                 cell = riderCell,
                                 distanceMeters = distance,
-                                roadName = roadName
+                                roadName = roadName,
+                                photoUrl = photoUrl
                             )
                     }
 
@@ -1913,6 +1991,7 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_SOS_LAT = "camera_guard_sos_lat"
         const val EXTRA_SOS_LON = "camera_guard_sos_lon"
         const val EXTRA_SOS_CREATED_AT = "camera_guard_sos_created_at"
+        const val EXTRA_CHAT_CONVERSATION_ID = "camera_guard_chat_conversation_id"
         private const val SOS_ALERT_DURATION_MILLIS = 10 * 60 * 1000L
 
 
@@ -1952,6 +2031,20 @@ class MainActivity : ComponentActivity() {
          * - not just a label. */
         private const val COMMUNITY_RIDER_RADIUS_METERS =
             50_000f
+
+        /* SOS notification eligibility radius, per spec: an SOS alert should reach
+         * every eligible community-enabled user within 10 km, not the whole
+         * (previously unfiltered) global sosAlerts feed. */
+        private const val SOS_NOTIFY_RADIUS_METERS =
+            10_000f
+
+        /* A recipient's own last-known location must be at least this fresh to be
+         * trusted for the 10 km radius check ("sufficiently recent known location
+         * data" in the spec). Deliberately more lenient than live-navigation
+         * freshness checks elsewhere - this only needs to be roughly where the
+         * rider still is, not a live GPS-tick-accurate fix. */
+        private const val SOS_LOCATION_MAX_AGE_MS =
+            15 * 60 * 1000L
 
         private const val COMMUNITY_RIDER_REFRESH_INTERVAL_MILLIS =
             20_000L

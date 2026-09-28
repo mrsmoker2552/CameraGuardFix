@@ -33,18 +33,25 @@ fun ChatHostScreen(
     modifier: Modifier = Modifier,
     myUid: String,
     myDisplayName: String,
+    // Google-hosted account avatar URL only (never an upload) - see
+    // CommunityRider.photoUrl for why this keeps rider photos free.
+    myPhotoUrl: String? = null,
     communityRiders: List<CommunityRider>,
     pendingDirectTargetUid: String? = null,
-    onPendingDirectTargetHandled: () -> Unit = {}
+    onPendingDirectTargetHandled: () -> Unit = {},
+    // Tap target for a rider-message notification (a conversation id, direct or group -
+    // see MainActivity.handleChatNotificationIntent / ChatNotifier.postChatNotification).
+    pendingConversationId: String? = null,
+    onPendingConversationIdHandled: () -> Unit = {}
 ) {
     var route by remember { mutableStateOf<ChatRoute>(ChatRoute.List) }
     var openError by remember { mutableStateOf<String?>(null) }
     var opening by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(myUid, myDisplayName) {
+    LaunchedEffect(myUid, myDisplayName, myPhotoUrl) {
         if (myDisplayName.isNotBlank() && myDisplayName != "Rider") {
-            runCatching { ChatRepository.ensureChatProfile(myDisplayName) }
+            runCatching { ChatRepository.ensureChatProfile(myDisplayName, myPhotoUrl) }
         }
     }
 
@@ -90,6 +97,13 @@ fun ChatHostScreen(
         if (pendingDirectTargetUid != null) {
             openDirect(pendingDirectTargetUid)
             onPendingDirectTargetHandled()
+        }
+    }
+
+    LaunchedEffect(pendingConversationId) {
+        if (pendingConversationId != null) {
+            openById(pendingConversationId)
+            onPendingConversationIdHandled()
         }
     }
 

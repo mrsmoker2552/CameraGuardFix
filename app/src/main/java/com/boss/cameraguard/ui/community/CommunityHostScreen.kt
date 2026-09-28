@@ -60,6 +60,8 @@ fun CommunityHostScreen(
     communityRiders: List<CommunityRider>,
     pendingDirectTargetUid: String? = null,
     onPendingDirectTargetHandled: () -> Unit = {},
+    pendingChatConversationId: String? = null,
+    onPendingChatConversationIdHandled: () -> Unit = {},
     onCommunityJoined: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -73,6 +75,9 @@ fun CommunityHostScreen(
     LaunchedEffect(pendingDirectTargetUid) {
         if (pendingDirectTargetUid != null) section = CommunitySection.MESSAGES
     }
+    LaunchedEffect(pendingChatConversationId) {
+        if (pendingChatConversationId != null) section = CommunitySection.MESSAGES
+    }
 
     DisposableEffect(Unit) {
         val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
@@ -85,6 +90,9 @@ fun CommunityHostScreen(
     val effectiveName = myDisplayName.takeIf { it.isNotBlank() && it != "Rider" }
         ?: authUser?.displayName?.takeIf { it.isNotBlank() }
         ?: "Rider"
+    // Free-only: always the Google-hosted avatar URL for this account, never an upload -
+    // see CommunityRider.photoUrl. null falls back to initials in RiderAvatar.
+    val myPhotoUrl = if (googleLinked) authUser?.photoUrl?.toString() else null
     val joined = googleLinked && communityEnabled
 
     if (!joined) {
@@ -126,20 +134,23 @@ fun CommunityHostScreen(
     }
 
     Column(modifier.fillMaxSize().background(CameraGuardPalette.Background)) {
-        CommunityHeader(effectiveName = effectiveName, onlineCount = communityRiders.size)
+        CommunityHeader(effectiveName = effectiveName, myPhotoUrl = myPhotoUrl, onlineCount = communityRiders.size)
         CommunitySectionPicker(section = section, onSelect = { section = it })
         Spacer(Modifier.height(6.dp))
         when (section) {
-            CommunitySection.FEED -> CommunityFeedScreen(Modifier.weight(1f), effectiveName)
+            CommunitySection.FEED -> CommunityFeedScreen(Modifier.weight(1f), effectiveName, myPhotoUrl)
             CommunitySection.RIDERS -> CommunityRidersScreen(Modifier.weight(1f), communityRiders)
             CommunitySection.MESSAGES -> if (myUid != null) {
                 ChatHostScreen(
                     modifier = Modifier.weight(1f),
                     myUid = myUid,
                     myDisplayName = effectiveName,
+                    myPhotoUrl = myPhotoUrl,
                     communityRiders = communityRiders,
                     pendingDirectTargetUid = pendingDirectTargetUid,
-                    onPendingDirectTargetHandled = onPendingDirectTargetHandled
+                    onPendingDirectTargetHandled = onPendingDirectTargetHandled,
+                    pendingConversationId = pendingChatConversationId,
+                    onPendingConversationIdHandled = onPendingChatConversationIdHandled
                 )
             } else {
                 Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -151,7 +162,7 @@ fun CommunityHostScreen(
 }
 
 @Composable
-private fun CommunityHeader(effectiveName: String, onlineCount: Int) {
+private fun CommunityHeader(effectiveName: String, myPhotoUrl: String? = null, onlineCount: Int) {
     Surface(
         color = Color.Transparent,
         shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp),
@@ -163,7 +174,7 @@ private fun CommunityHeader(effectiveName: String, onlineCount: Int) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Box {
-                RiderAvatar(effectiveName, size = 48.dp)
+                RiderAvatar(effectiveName, size = 48.dp, photoUrl = myPhotoUrl)
                 Box(
                     Modifier.align(Alignment.BottomEnd).size(13.dp)
                         .background(CameraGuardPalette.Surface, CircleShape).padding(2.dp)
@@ -262,7 +273,7 @@ private fun CommunityJoinScreen(modifier: Modifier, googleLinked: Boolean, busy:
 }
 
 @Composable
-private fun CommunityFeedScreen(modifier: Modifier, displayName: String) {
+private fun CommunityFeedScreen(modifier: Modifier, displayName: String, myPhotoUrl: String? = null) {
     var posts by remember { mutableStateOf<List<CommunityPost>>(emptyList()) }
     var text by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -281,7 +292,7 @@ private fun CommunityFeedScreen(modifier: Modifier, displayName: String) {
         ) {
             Column(Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    RiderAvatar(displayName, size = 38.dp)
+                    RiderAvatar(displayName, size = 38.dp, photoUrl = myPhotoUrl)
                     Column {
                         Text("Share with riders", color = CameraGuardPalette.Text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         Text("No automatic location sharing", color = CameraGuardPalette.Muted, fontSize = 10.sp)
@@ -367,7 +378,7 @@ private fun CommunityRidersScreen(modifier: Modifier, riders: List<CommunityRide
             ) {
                 Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(11.dp)) {
                     Box {
-                        RiderAvatar(rider.displayName.ifBlank { "Rider" }, size = 44.dp)
+                        RiderAvatar(rider.displayName.ifBlank { "Rider" }, size = 44.dp, photoUrl = rider.photoUrl)
                         Box(
                             Modifier.align(Alignment.BottomEnd).size(12.dp)
                                 .background(CameraGuardPalette.Surface, CircleShape).padding(2.dp)

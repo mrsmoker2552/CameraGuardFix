@@ -70,7 +70,7 @@ fun CreateGroupScreen(
                                 .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            RiderAvatar(rider.displayName, size = 36.dp)
+                            RiderAvatar(rider.displayName, size = 36.dp, photoUrl = rider.photoUrl)
                             Text(rider.displayName.ifBlank { "Rider" }, color = CameraGuardPalette.Text, modifier = Modifier.weight(1f))
                             Checkbox(checked = isSelected, onCheckedChange = { checked -> if (checked) selected.add(rider.uid) else selected.remove(rider.uid) })
                         }
@@ -167,12 +167,13 @@ fun GroupInfoScreen(
             LazyColumn(Modifier.weight(1f)) {
                 items(conversation.memberUids, key = { it }) { uid ->
                     val name = memberProfiles[uid]?.displayName ?: "Rider"
+                    val memberPhotoUrl = memberProfiles[uid]?.photoUrl
                     val admin = uid in conversation.groupAdmins
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        RiderAvatar(name, size = 36.dp)
+                        RiderAvatar(name, size = 36.dp, photoUrl = memberPhotoUrl)
                         Text(name + if (uid == myUid) " (you)" else "", color = CameraGuardPalette.Text, modifier = Modifier.weight(1f))
                         if (admin) Text("Admin", color = CameraGuardPalette.Accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
@@ -228,7 +229,7 @@ private fun AddMembersSheet(communityRiders: List<CommunityRider>, onDismiss: ()
                         Modifier.fillMaxWidth().clickable { if (isSelected) selected.remove(rider.uid) else selected.add(rider.uid) }.padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        RiderAvatar(rider.displayName, size = 32.dp)
+                        RiderAvatar(rider.displayName, size = 32.dp, photoUrl = rider.photoUrl)
                         Text(rider.displayName.ifBlank { "Rider" }, color = CameraGuardPalette.Text, modifier = Modifier.weight(1f))
                         Checkbox(checked = isSelected, onCheckedChange = { checked -> if (checked) selected.add(rider.uid) else selected.remove(rider.uid) })
                     }
