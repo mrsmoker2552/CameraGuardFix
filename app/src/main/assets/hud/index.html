@@ -36,6 +36,9 @@
 .mini-tools{left:4%!important;top:12%!important;width:56%!important;height:21%!important}.mini-tools small{display:none!important}
 .roadname{left:5%!important;top:33.7%!important;z-index:8!important}.roadname small{font-size:10px!important;letter-spacing:.9px}.roadname strong{margin-top:5px!important;font-size:clamp(17px,4.4vw,23px)!important}
 .hud>.speedlimit{left:auto!important;right:5%!important;top:32%!important;z-index:8!important}
+.hud>#camResetBtn{position:absolute!important;right:4.5%!important;left:auto!important;top:23%!important;z-index:8!important;font-size:9px!important;font-weight:750!important;padding:7px 10px!important;border-radius:10px!important;border:1px solid #62AAE5!important;background:#102535a6!important;color:#F7FAFF!important;box-shadow:0 0 14px #0088bd24!important;opacity:.94;transition:opacity .2s;display:block}
+.hud>#camResetBtn[hidden]{display:none!important}
+html[data-theme="light"] .hud>#camResetBtn{background:#ffffffd9!important;color:#16465f!important;border-color:#6eb6d1!important;box-shadow:0 5px 18px #30566b22!important}
 .hud>.speed{top:42%!important;left:4%!important;width:clamp(135px,34vw,178px)!important;height:auto!important;max-height:none!important;z-index:8!important}
 .speed-dial{box-shadow:inset 0 0 18px #1cbcff15,0 0 0 5px #0c20308a!important}
 .speed .speed-readout strong{font-size:clamp(40px,10vw,54px)!important}
@@ -124,7 +127,7 @@ html,body{background:var(--cg-midnight);color:var(--cg-text)}
  <div class="cg-gps-privacy">Test while parked. Recording starts only when tapped. FULL export contains your exact location, route and road coordinates; nothing is uploaded automatically.</div>
  <div class="cg-gps-actions"><button id="cgGpsDebugStart" type="button">Start recording</button><button id="cgGpsDebugSummary" type="button">Copy summary</button><button id="cgGpsDebugCopy" type="button">Copy FULL GPS log</button></div>
  <div id="cgGpsDebugStatus" aria-live="polite"></div><pre id="cgGpsDebugDetails"></pre>
-</section><div class="cg-hud-footer-logo" aria-label="Smoker’s Map"><span class="cg-hud-footer-shield"><svg width="25" height="26" viewBox="0 0 25 26" role="img" aria-label="Smoker’s Map shield"><path d="M12.5 1 L23 5.6 V13.1 C23 19.2 18.6 23.3 12.5 25 C6.4 23.3 2 19.2 2 13.1 V5.6 Z" fill="#62AAE5"/><path d="M12.5 6.4 L18.5 19.1 L12.5 15.8 L6.5 19.1 Z" fill="#040521"/></svg></span><span><strong>Smoker’s</strong><small>MAP</small></span></div><canvas id="road3d" aria-label="Live heading-up 3D navigation map with fixed scooter"></canvas><div id="mini3d" aria-label="Borderless aerial heading-up mini map, rider centred, surrounding real roads"><canvas id="miniMapLayer" aria-hidden="true"></canvas><canvas id="miniArrowLayer" aria-label="Current location arrow"></canvas></div><div class="mini-tools"><span> AERIAL · HEADING ↑</span><button id="routeToggle" type="button">ROUTE</button></div><div class="roadname"><small>CURRENT ROAD</small><strong>Waiting for road</strong></div><div class="speedlimit" id="speedLimitSign" aria-label="Speed limit" hidden><span id="speedLimitValue">—</span><small>km/h</small></div><div class="speed" aria-label="Live speedometer"><div class="speed-dial"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="dial-track" cx="50" cy="50" r="45"/><circle class="dial-progress" cx="50" cy="50" r="45"/><circle class="dial-inner" cx="50" cy="50" r="36"/></svg><div class="speed-readout"><strong id="speed">—</strong><span>km/h</span><small>SPEED</small></div></div></div><div class="heading" aria-label="Live heading"><div class="heading-label">HEADING ↗</div><strong>—</strong><em>WAITING FOR GPS</em></div>
+</section><div class="cg-hud-footer-logo" aria-label="Smoker’s Map"><span class="cg-hud-footer-shield"><svg width="25" height="26" viewBox="0 0 25 26" role="img" aria-label="Smoker’s Map shield"><path d="M12.5 1 L23 5.6 V13.1 C23 19.2 18.6 23.3 12.5 25 C6.4 23.3 2 19.2 2 13.1 V5.6 Z" fill="#62AAE5"/><path d="M12.5 6.4 L18.5 19.1 L12.5 15.8 L6.5 19.1 Z" fill="#040521"/></svg></span><span><strong>Smoker’s</strong><small>MAP</small></span></div><canvas id="road3d" aria-label="Live heading-up 3D navigation map with fixed scooter"></canvas><div id="mini3d" aria-label="Borderless aerial heading-up mini map, rider centred, surrounding real roads"><canvas id="miniMapLayer" aria-hidden="true"></canvas><canvas id="miniArrowLayer" aria-label="Current location arrow"></canvas></div><div class="mini-tools"><span> AERIAL · HEADING ↑</span><button id="routeToggle" type="button">ROUTE</button></div><div class="roadname"><small>CURRENT ROAD</small><strong>Waiting for road</strong></div><div class="speedlimit" id="speedLimitSign" aria-label="Speed limit" hidden><span id="speedLimitValue">—</span><small>km/h</small></div><div class="speed" aria-label="Live speedometer"><div class="speed-dial"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="dial-track" cx="50" cy="50" r="45"/><circle class="dial-progress" cx="50" cy="50" r="45"/><circle class="dial-inner" cx="50" cy="50" r="36"/></svg><div class="speed-readout"><strong id="speed">—</strong><span>km/h</span><small>SPEED</small></div></div></div><div class="heading" aria-label="Live heading"><div class="heading-label">HEADING ↗</div><strong>—</strong><em>WAITING FOR GPS</em></div><button id="camResetBtn" type="button" aria-label="Reset 3D view" hidden>RESET VIEW</button>
 <div class="scooter" id="scooterModel" aria-label="Real-time 3D scooter and rider"><canvas id="scooter3d" aria-label="Three-dimensional scooter and rider rendered with WebGL"></canvas><div id="renderStatus" class="render-status">Starting 3D engine…</div></div>
 <div class="warning"><div class="main"><div class="camicon"><svg viewBox="0 0 32 32"><rect x="5" y="8" width="22" height="14" rx="2" fill="#26313a"/><circle cx="12" cy="15" r="3" fill="#dbe5eb"/><rect x="19" y="12" width="5" height="5" rx="1" fill="#dbe5eb"/><path d="M16 22v7m-5 0 5-4 5 4" stroke="#26313a" stroke-width="2"/></svg></div><div><small>SPEED CAMERA</small><strong id="distance">—</strong></div></div><div class="track"><i></i></div></div>
 <section class="modal" id="modal"><button onclick="document.getElementById('modal').classList.remove('show')">Close</button><strong id="modalTitle">Demo</strong><p>Live CameraGuard HUD.</p></section></main><script>function show(name){document.getElementById('modalTitle').textContent=name+' · Demo';document.getElementById('modal').classList.add('show')}</script><script>
@@ -384,6 +387,7 @@ window.CameraGuardUpdate=function(d){
  document.querySelector('.dial-progress').style.strokeDasharray=(Math.min(1,Math.max(0,d.speed/160))*283)+' 283';
  document.querySelector('.live').lastChild.textContent=d.gps?' GPS LIVE':' GPS WAIT';
  drawAerial();if(window.CameraGuardRouteRibbonUpdate)window.CameraGuardRouteRibbonUpdate();
+ window.CameraGuardLightingUpdate?.(d);
  window.CameraGuardGpsDebug?.record(live);
 };
 if(window.__cameraGuardPending)window.CameraGuardUpdate(window.__cameraGuardPending);
@@ -404,6 +408,9 @@ function light(color,power,x,y,z){const l=new THREE.DirectionalLight(color,power
 const paint=new THREE.MeshPhysicalMaterial({color:0x2f4d64,metalness:.68,roughness:.25,clearcoat:1,clearcoatRoughness:.12});
 const shell=new THREE.MeshPhysicalMaterial({color:0x3d5a70,metalness:.38,roughness:.33,clearcoat:.8});
 const rubber=new THREE.MeshStandardMaterial({color:0x1c2126,roughness:.9});const black=new THREE.MeshStandardMaterial({color:0x27333f,metalness:.25,roughness:.58});const textile=new THREE.MeshStandardMaterial({color:0x33495d,roughness:.88});const textile2=new THREE.MeshStandardMaterial({color:0x4d6a80,roughness:.82});const silver=new THREE.MeshStandardMaterial({color:0xc9d8e2,metalness:.8,roughness:.2});const red=new THREE.MeshPhysicalMaterial({color:0xff263b,emissive:0xd50012,emissiveIntensity:2.2,roughness:.22});const visor=new THREE.MeshPhysicalMaterial({color:0x14293b,metalness:.55,roughness:.12,clearcoat:1});const white=new THREE.MeshStandardMaterial({color:0xe4eef3,roughness:.4});
+// Left/right turn-indicator lamp materials (one independent material per side, so each
+// can be driven separately by the automatic turn-indicator logic further below).
+const turnLightMats={left:null,right:null};
 const bike=new THREE.Group();scene.add(bike);
 function mesh(geometry,mat,x,y,z,group=bike){const m=new THREE.Mesh(geometry,mat);m.position.set(x,y,z);group.add(m);return m}
 function ball(mat,x,y,z,sx,sy,sz,group=bike){const m=mesh(new THREE.SphereGeometry(1,32,20),mat,x,y,z,group);m.scale.set(sx,sy,sz);return m}
@@ -432,13 +439,15 @@ for(const side of [-1,1]){
  rod(silver,[side*.28,.63,.79],[side*.42,1.09,.22],.035);
  for(let i=0;i<5;i++)rod(black,[side*.26,.67+i*.045,.88],[side*.38,.68+i*.045,.88],.009);
  box(black,side*.46,.83,.91,.13,.09,.23);
- const turn=ball(new THREE.MeshStandardMaterial({color:0xffad40,emissive:0xb35b09,emissiveIntensity:.55}),side*.48,1.34,1.31,.105,.052,.04);
+ const turnMat=new THREE.MeshStandardMaterial({color:0xffad40,emissive:0xb35b09,emissiveIntensity:.05});
+ const turn=ball(turnMat,side*.48,1.34,1.31,.105,.052,.04);
+ turnLightMats[side===1?'right':'left']=turnMat;
 }
 for(let i=0;i<12;i++){const a=i*Math.PI/6;const t=box(black,0,.49+Math.sin(a)*.39,1.02+Math.cos(a)*.39,.21,.032,.045);t.rotation.x=-a}
 const roadCanvas=document.getElementById('road3d');
 function makeRenderer(c){const r=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:true,powerPreference:'high-performance'});r.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));r.outputColorSpace=THREE.SRGBColorSpace;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.75;return r}
-const roadRenderer=makeRenderer(roadCanvas),roadScene=new THREE.Scene();roadScene.background=new THREE.Color(0x0D2A5C);roadScene.fog=new THREE.FogExp2(0x12376F,.006);
-const roadCamera=new THREE.PerspectiveCamera(62,1,.1,700);roadCamera.position.set(0,14,42);roadCamera.lookAt(0,.1,-75);
+const roadRenderer=makeRenderer(roadCanvas),roadScene=new THREE.Scene();roadScene.background=new THREE.Color(0x0D2A5C);roadScene.fog=new THREE.FogExp2(0x12376F,.0018);
+const roadCamera=new THREE.PerspectiveCamera(62,1,.1,900);roadCamera.position.set(0,14,42);roadCamera.lookAt(0,.1,-75);
 // The rider and road now share the SAME 3D scene/camera. This is essential: a scooter
 // rendered in a separate WebGL scene cannot remain visually locked to a curved road
 // when the user rotates, tilts or zooms the HUD camera.
@@ -900,19 +909,150 @@ window.CameraGuardRouteRibbonUpdate=updateRoadGeometry;
 const moving=[];
 // Soft road-level illumination; no animated flashing or visual obstruction.
 const roadFill=new THREE.PointLight(0x70b5e5,.75,17,2);roadFill.position.set(0,2.8,5);roadScene.add(roadFill);
+// ---- Rear brake light: genuine-deceleration detection, purely a lighting effect --------
+// Uses ONLY the existing shared navigation/telemetry state (live.speed, which is already
+// the app's filtered speed, plus GPS availability) - no second speed engine. A short
+// rolling history + a minimum sustained decel rate + hysteresis means one slightly lower
+// GPS/filtered sample can never light the brake on its own; it only engages on a genuine,
+// multi-sample downward trend, and releases (with a short hold) once that trend ends.
+const TAIL_DIM_INTENSITY=0.55, BRAKE_BRIGHT_INTENSITY=3.0;
+const BRAKE_ENGAGE_RATE_KMH_S=-4.5, BRAKE_RELEASE_RATE_KMH_S=-1.2, BRAKE_MIN_HOLD_MS=350;
+let brakeSpeedHistory=[],brakeActive=false,brakeActiveSinceMs=0,displayedBrakeIntensity=TAIL_DIM_INTENSITY;
+red.emissiveIntensity=TAIL_DIM_INTENSITY;
+function updateBrakeLightState(d){
+ // Ignore samples where GPS is unavailable: a stale fix forced to 0 speed upstream must
+ // never be misread as sudden hard braking. State simply freezes until GPS resumes.
+ if(!d||!d.gps)return;
+ const speed=Number(d.speed);if(!Number.isFinite(speed))return;
+ const now=performance.now();
+ brakeSpeedHistory.push({t:now,speed});
+ while(brakeSpeedHistory.length>1&&now-brakeSpeedHistory[0].t>2200)brakeSpeedHistory.shift();
+ if(brakeSpeedHistory.length>=2){
+  const oldest=brakeSpeedHistory[0],newest=brakeSpeedHistory[brakeSpeedHistory.length-1];
+  const dtS=(newest.t-oldest.t)/1000;
+  if(dtS>=0.3){
+   const rate=(newest.speed-oldest.speed)/dtS;
+   // Require the trend to actually be downward across the window (not just the
+   // endpoints), so one noisy uptick sandwiched between two lower samples cannot
+   // register as a clean, sustained deceleration.
+   let monotonicDown=true;
+   for(let i=1;i<brakeSpeedHistory.length;i++)if(brakeSpeedHistory[i].speed>brakeSpeedHistory[i-1].speed+1.5){monotonicDown=false;break}
+   if(!brakeActive&&monotonicDown&&rate<=BRAKE_ENGAGE_RATE_KMH_S){brakeActive=true;brakeActiveSinceMs=now;}
+   else if(brakeActive&&rate>=BRAKE_RELEASE_RATE_KMH_S&&(now-brakeActiveSinceMs)>=BRAKE_MIN_HOLD_MS){brakeActive=false;}
+  }
+ }
+}
+// ---- Automatic turn indicators: activate ~100m before the next route maneuver ----------
+// Consumes ONLY the shared turnDirection/turnDistanceMeters the native side already derives
+// from the same authoritative route/progress tracker the Route tab and voice guidance use
+// (see LiveHudScreen/NavigationProgressTracker) - no second maneuver engine here. This
+// function just decides, from that shared state, which side (if any) should be latched on;
+// the actual blink timing is applied every frame in tick() below.
+const TURN_ENGAGE_METERS=105, TURN_RELEASE_METERS=130;
+const TURN_OFF_INTENSITY=0.05, TURN_ON_INTENSITY=2.0;
+let activeTurnSide=null,lastTurnDirection='none';
+function updateTurnIndicatorState(d){
+ const dir=(d&&(d.turnDirection==='left'||d.turnDirection==='right'))?d.turnDirection:'none';
+ const dist=Number(d&&d.turnDistanceMeters);const hasDist=Number.isFinite(dist);
+ // The authoritative next maneuver changed side (it was passed, or a reroute swapped it) -
+ // drop whatever was showing immediately rather than leaving a stale side blinking; the
+ // block below then re-evaluates fresh against the new incoming maneuver the very same tick.
+ if(activeTurnSide&&dir!==activeTurnSide)activeTurnSide=null;
+ if(dir==='none'||!hasDist){activeTurnSide=null;}
+ else if(activeTurnSide===dir){
+  if(dist>TURN_RELEASE_METERS)activeTurnSide=null;
+ }else if(dist<=TURN_ENGAGE_METERS){
+  activeTurnSide=dir;
+ }
+ lastTurnDirection=dir;
+}
+window.CameraGuardLightingUpdate=function(d){updateBrakeLightState(d);updateTurnIndicatorState(d);};
+window.__cgBrakeDebug=()=>({brakeActive,displayedBrakeIntensity,red:red.emissiveIntensity,historyLen:brakeSpeedHistory.length});
+window.__cgTurnDebug=()=>({activeTurnSide,lastTurnDirection,left:turnLightMats.left?.emissiveIntensity,right:turnLightMats.right?.emissiveIntensity});
 // Do not place straight roadside rails/posts across actual mapped bends and junctions.
 // Original locked HUD v12 mini-map canvas and geometry; live GPS/OSM points only.
 // (miniMapLayer/miniArrowLayer/live/drawAerial/CameraGuardUpdate are defined above,
 // outside this try block, so they keep working even if this 3D section fails.)
-// Navigation camera is intentionally locked.  The rider remains anchored while the
-// heading-up map rotates/reprojects from live GPS direction; user gestures cannot displace it.
+// The rider/scene position itself is intentionally locked - GPS, route geometry and the
+// heading-up reprojection are all untouched by anything below. What IS adjustable is purely
+// where this camera stands while looking at that fixed scene: an orbit angle around it and a
+// zoom/distance multiplier, both applied on top of the same base eye/target Three.js always
+// used before. At the defaults (0 deg orbit, 1x zoom) this reproduces the exact original camera
+// pose, so nobody who never touches the view sees any change at all.
+const CAM_BASE_EYE=new THREE.Vector3(0,34,50), CAM_BASE_TARGET=new THREE.Vector3(0,0,-44);
+const CAM_ZOOM_MIN=0.55, CAM_ZOOM_MAX=1.85;
+let camOrbitDeg=0, camZoom=1;
 function updateHudCamera(){
- roadCamera.position.set(0,34,50);
- roadCamera.lookAt(0,0,-44);
+ // Orbit and zoom pivot on the scooter's own position (the world origin the rider/road
+ // scene is built around), NOT on the distant forward look-ahead point. Orbiting around
+ // that far point would swing the near camera eye through a huge arc for only a small
+ // change in viewing angle at the scooter, sweeping the scooter itself straight out of
+ // frame. Rotating the base eye AND base target together around the scooter keeps the
+ // scooter centred at every orbit angle, exactly like turning around a fixed subject.
+ const rad=THREE.MathUtils.degToRad(camOrbitDeg);
+ const cosA=Math.cos(rad), sinA=Math.sin(rad);
+ function rotY(v){return new THREE.Vector3(v.x*cosA+v.z*sinA, v.y, -v.x*sinA+v.z*cosA);}
+ const eyeRotated=rotY(CAM_BASE_EYE).multiplyScalar(camZoom);
+ const targetRotated=rotY(CAM_BASE_TARGET);
+ roadCamera.position.copy(eyeRotated);
+ roadCamera.lookAt(targetRotated);
  roadCamera.fov=54;roadCamera.updateProjectionMatrix();
+ const resetBtn=document.getElementById('camResetBtn');
+ if(resetBtn)resetBtn.hidden=(Math.abs(camOrbitDeg)<0.5&&Math.abs(camZoom-1)<0.02);
 }
 updateHudCamera();
-const roadTouch=document.getElementById('road3d');roadTouch.style.pointerEvents='none';
+// Visual-only HUD camera controls: one-finger drag orbits the view, pinch zooms it, and the
+// RESET VIEW button (or a double-tap) restores the default pose. None of this touches GPS
+// coordinates, route geometry, the destination or navigation state - only where this one
+// camera is standing while it looks at that unchanged scene.
+const roadTouch=document.getElementById('road3d');
+roadTouch.style.pointerEvents='auto';roadTouch.style.touchAction='none';
+(function(){
+ const pointers=new Map();
+ let dragLastX=null,pinchStartDist=null,pinchStartZoom=1,lastTapAt=0,gestureMoved=false;
+ function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+ function resetView(){camOrbitDeg=0;camZoom=1;updateHudCamera();}
+ roadTouch.addEventListener('pointerdown',e=>{
+  roadTouch.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  gestureMoved=false;
+  if(pointers.size===1){dragLastX=e.clientX;}
+  else if(pointers.size===2){const pts=[...pointers.values()];pinchStartDist=dist(pts[0],pts[1]);pinchStartZoom=camZoom;dragLastX=null;}
+ });
+ roadTouch.addEventListener('pointermove',e=>{
+  if(!pointers.has(e.pointerId))return;
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===1&&dragLastX!==null){
+   const dx=e.clientX-dragLastX;
+   if(Math.abs(dx)>1){gestureMoved=true;camOrbitDeg=(camOrbitDeg-dx*0.35+360)%360;dragLastX=e.clientX;updateHudCamera();}
+  }else if(pointers.size===2&&pinchStartDist){
+   const pts=[...pointers.values()];const d=dist(pts[0],pts[1]);
+   if(Math.abs(d-pinchStartDist)>2){
+    gestureMoved=true;
+    const ratio=d/Math.max(1,pinchStartDist);
+    camZoom=Math.min(CAM_ZOOM_MAX,Math.max(CAM_ZOOM_MIN,pinchStartZoom/ratio));
+    updateHudCamera();
+   }
+  }
+ });
+ function endPointer(e){
+  pointers.delete(e.pointerId);
+  if(pointers.size<2)pinchStartDist=null;
+  if(pointers.size===1){const only=[...pointers.values()][0];dragLastX=only.x;}
+  else if(pointers.size===0){
+   dragLastX=null;
+   if(!gestureMoved){
+    const now=Date.now();
+    if(now-lastTapAt<320)resetView();
+    lastTapAt=now;
+   }
+  }
+ }
+ roadTouch.addEventListener('pointerup',endPointer);
+ roadTouch.addEventListener('pointercancel',endPointer);
+ roadTouch.addEventListener('pointerleave',endPointer);
+ document.getElementById('camResetBtn')?.addEventListener('click',resetView);
+})();
 function resizeExtra(){const w=holder.closest('.hud').clientWidth,h=holder.closest('.hud').clientHeight;if(w<1||h<1)return;roadRenderer.setSize(w,h,false);roadCamera.aspect=w/h;roadCamera.updateProjectionMatrix()}
 new ResizeObserver(resizeExtra).observe(holder.closest('.hud'));resizeExtra();
 
@@ -932,6 +1072,18 @@ function tick(t){
  const leanAlpha=1-Math.exp(-dt/0.18);currentBikeLean+=(targetBikeLean-currentBikeLean)*leanAlpha;
  roadBike.rotation.z=currentBikeLean;roadBike.position.y=.13+Math.sin(t*.0022)*.009;roadBikeShadow.rotation.z=currentBikeLean*.12;
  const sosPulse=.5+.5*Math.sin(t*.008);for(const child of hudMapWorldGroup.children){if(child.userData?.sosBlink){child.scale.setScalar(.92+sosPulse*.18);for(const part of child.children){if(part.userData?.sosRing&&part.material)part.material.opacity=.35+sosPulse*.65;}}}
+ // Smoothly ease the shared brake-light material toward whatever state the deceleration
+ // detector last settled on, so a genuine brake event reads as a clean light change
+ // rather than an instant on/off snap. Same material is used by both 3D scooter views.
+ const brakeTarget=brakeActive?BRAKE_BRIGHT_INTENSITY:TAIL_DIM_INTENSITY;
+ const brakeAlpha=1-Math.exp(-dt/0.09);displayedBrakeIntensity+=(brakeTarget-displayedBrakeIntensity)*brakeAlpha;
+ red.emissiveIntensity=displayedBrakeIntensity;
+ // Realistic turn-indicator blink: ~1.4 Hz on/off, never a permanently-lit indicator.
+ // activeTurnSide (set in updateTurnIndicatorState above) is the single source of truth
+ // for which side, if any, should be blinking this frame.
+ const turnBlinkOn=Math.floor(t/350)%2===0;
+ if(turnLightMats.left)turnLightMats.left.emissiveIntensity=(activeTurnSide==='left'&&turnBlinkOn)?TURN_ON_INTENSITY:TURN_OFF_INTENSITY;
+ if(turnLightMats.right)turnLightMats.right.emissiveIntensity=(activeTurnSide==='right'&&turnBlinkOn)?TURN_ON_INTENSITY:TURN_OFF_INTENSITY;
  roadRenderer.render(roadScene,roadCamera);requestAnimationFrame(tick)}requestAnimationFrame(tick);
 window.CameraGuardDiag&&window.CameraGuardDiag.report('ready','');
 }catch(e){status.textContent='3D renderer unavailable: '+e.message;console.error(e);window.CameraGuardDiag&&window.CameraGuardDiag.report('threejs-init',String(e&&e.message||e))}

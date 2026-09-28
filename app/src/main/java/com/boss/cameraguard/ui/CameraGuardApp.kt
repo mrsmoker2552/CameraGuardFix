@@ -2005,6 +2005,25 @@ private class HudDiagnosticsBridge(
     }
 }
 
+/**
+ * Classifies a turn-by-turn instruction string (from either routing backend's free-text
+ * [NavigationStep.instruction]) into which side the HUD's automatic turn indicator should
+ * use. Purely a text classifier for the existing instruction the app already computes -
+ * it does not alter routing, instructions or distances. Straight/continue/keep-straight
+ * text with no left/right wording correctly falls through to "none" (no indicator), per
+ * the requirement that those must not light an indicator.
+ */
+private fun classifyTurnDirection(instruction: String): String {
+    val t = instruction.lowercase()
+    val hasLeft = t.contains("left")
+    val hasRight = t.contains("right")
+    return when {
+        hasRight && !hasLeft -> "right"
+        hasLeft && !hasRight -> "left"
+        else -> "none"
+    }
+}
+
 @Composable
 private fun LiveHudScreen(
     modifier: Modifier,
@@ -2041,6 +2060,20 @@ private fun LiveHudScreen(
     // Reads the same shared route the Map tab writes to; see SpeakRouteGuidance above.
     val hudVoice = rememberVoiceGuidance()
     SpeakRouteGuidance(hudVoice, active = true, liveLocation = liveLocation)
+
+    // Automatic turn indicators (HUD scooter lights): reuse the SAME authoritative
+    // route/progress engine the Route tab and voice guidance already use - no second
+    // navigation/maneuver engine is built here. Just the next-maneuver instruction and
+    // distance-to-maneuver, already computed by NavigationProgressTracker, reclassified
+    // into a left/right/none side for the light. The ~100m activation window, hysteresis
+    // and blink/latch behaviour live entirely in the HUD JS (index.html), matching how
+    // the brake light already consumes shared state without a duplicate engine.
+    val hudProgressTracker = remember(selectedRoute) {
+        selectedRoute?.takeIf { it.active }?.let { NavigationProgressTracker(it) }
+    }
+    val hudNavProgress = liveLocation?.let { loc -> hudProgressTracker?.update(loc) }
+    val hudTurnDirection = hudNavProgress?.let { classifyTurnDirection(it.nextInstruction) } ?: "none"
+    val hudTurnDistanceMeters = hudNavProgress?.nextTurnMeters
 
     val context = LocalContext.current
 
@@ -2210,6 +2243,12 @@ private fun LiveHudScreen(
         put("routePoints", org.json.JSONArray().apply {
             selectedRoute?.takeIf { it.active }?.points?.forEach { point -> put(org.json.JSONArray().put(point.latitude).put(point.longitude)) }
         })
+        // Automatic turn indicators: the next maneuver's side ("left"/"right"/"none") and
+        // distance in meters, from the same NavigationProgressTracker used by the Route tab
+        // and voice guidance. The HUD JS owns the ~100m activation window, hysteresis and
+        // blink/latch timing - this is only the shared upstream data (see Section 20).
+        put("turnDirection", hudTurnDirection)
+        put("turnDistanceMeters", hudTurnDistanceMeters?.takeIf { it.isFinite() } ?: JSONObject.NULL)
         put("sosAlerts", org.json.JSONArray().apply {
             sosAlerts.filter { it.isFresh() }.forEach { alert ->
                 put(JSONObject().apply {
