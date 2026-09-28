@@ -30,19 +30,20 @@
 @media(max-height:700px){.heading{top:calc(2.5% + 56px)}.speed{top:37%;width:105px;height:105px}}
 .hud{max-width:none!important;height:100dvh!important;min-height:0!important;border-radius:0!important}.hud:before{display:none!important}.tabs,.hudbtn,.heading{display:none!important}.warning{display:none}.render-status{font-size:12px}</style><style id="android-locked-v12-viewport">html,body{width:100%;height:100%;min-height:100%;margin:0;overflow:hidden}.hud{width:100%!important;height:100dvh!important;min-height:0!important;max-height:none!important;margin:0!important;overflow:hidden}</style><style id="android-webview-paint-fix">html,body{display:block!important;visibility:visible!important;opacity:1!important;background:#040521!important}.hud{display:block!important;visibility:visible!important;opacity:1!important;contain:none!important}.hud>.header,.hud>.roadname,.hud>.speed,.hud>.heading{visibility:visible!important;opacity:1!important}</style><style id="android-hud-viewport-anchor">html,body{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;min-height:100%!important;margin:0!important;padding:0!important;overflow:hidden!important}body>.hud{position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:0!important;inset:0!important;transform:none!important;margin:0!important;width:100%!important;max-width:none!important;min-height:0!important;overflow:hidden!important}</style><style id="android-v12-layout-alignment">
 /* Keep the original Three.js scene; align DOM instruments within the Android HUD viewport. */
-.hud>.heading{display:block!important;visibility:visible!important;opacity:1!important;top:12%!important;right:4.5%!important;width:26%!important;min-width:104px;max-width:150px;text-align:center!important;padding:15px 9px!important;background:#1a3145ed!important;border:1px solid #466a83!important;border-radius:15px!important;z-index:8!important}
-.heading .heading-label{font-size:10px!important;letter-spacing:1.3px}.heading strong{font-size:clamp(29px,7vw,43px)!important}.heading em{font-size:11px!important;line-height:1.3!important;overflow-wrap:anywhere}
+/* The HEADING card is removed from the HUD - the speedometer (.hud>.speed below) now
+   occupies its former top-right slot. .heading{display:none!important} above already
+   covers the (now-deleted) element; nothing else to hide here. */
 #mini3d{left:3%!important;top:11.7%!important;width:59%!important;height:22%!important}
 .mini-tools{left:4%!important;top:12%!important;width:56%!important;height:21%!important}.mini-tools small{display:none!important}
 .roadname{left:5%!important;top:33.7%!important;z-index:8!important}.roadname small{font-size:10px!important;letter-spacing:.9px}.roadname strong{margin-top:5px!important;font-size:clamp(17px,4.4vw,23px)!important}
-.hud>.speedlimit{left:auto!important;right:5%!important;top:32%!important;z-index:8!important}
-.hud>#camResetBtn{position:absolute!important;right:4.5%!important;left:auto!important;top:23%!important;z-index:8!important;font-size:9px!important;font-weight:750!important;padding:7px 10px!important;border-radius:10px!important;border:1px solid #62AAE5!important;background:#102535a6!important;color:#F7FAFF!important;box-shadow:0 0 14px #0088bd24!important;opacity:.94;transition:opacity .2s;display:block}
+.hud>.speedlimit{left:auto!important;right:5%!important;top:40%!important;z-index:8!important}
+.hud>#camResetBtn{position:absolute!important;right:4.5%!important;left:auto!important;top:29%!important;z-index:8!important;font-size:9px!important;font-weight:750!important;padding:7px 10px!important;border-radius:10px!important;border:1px solid #62AAE5!important;background:#102535a6!important;color:#F7FAFF!important;box-shadow:0 0 14px #0088bd24!important;opacity:.94;transition:opacity .2s;display:block}
 .hud>#camResetBtn[hidden]{display:none!important}
 html[data-theme="light"] .hud>#camResetBtn{background:#ffffffd9!important;color:#16465f!important;border-color:#6eb6d1!important;box-shadow:0 5px 18px #30566b22!important}
-.hud>.speed{top:42%!important;left:4%!important;width:clamp(135px,34vw,178px)!important;height:auto!important;max-height:none!important;z-index:8!important}
+.hud>.speed{top:11%!important;right:4.5%!important;left:auto!important;width:clamp(118px,30vw,150px)!important;height:auto!important;max-height:none!important;z-index:8!important}
 .speed-dial{box-shadow:inset 0 0 18px #1cbcff15,0 0 0 5px #0c20308a!important}
 .speed .speed-readout strong{font-size:clamp(40px,10vw,54px)!important}
-@media(max-height:720px){.hud>.speed{top:42%!important;width:clamp(122px,32vw,156px)!important}.roadname{top:34%!important}.hud>.speedlimit{top:32.5%!important}}
+@media(max-height:720px){.hud>.speed{top:10%!important;width:clamp(108px,28vw,138px)!important}.roadname{top:34%!important}.hud>.speedlimit{top:39%!important}}
 </style><style id="cg-premium-live-warning">
 /* The native bottom navigation is outside this WebView; keep the warning above it. */
 .hud>.warning{display:none;position:absolute!important;top:auto!important;bottom:2%!important;left:2%!important;right:2%!important;width:96%!important;min-width:0!important;max-width:none!important;z-index:30!important;padding:14px 16px!important;background:linear-gradient(115deg,#1b1727,#14243a 65%,#12283a)!important;border:2px solid #fa5a69!important;border-radius:20px!important;box-shadow:0 10px 32px #000b,0 0 22px #fa455733!important;backdrop-filter:none!important;animation:cgHeart 1.25s ease-in-out infinite!important}
@@ -141,7 +142,7 @@ html[data-theme="light"] .hudbtn,html[data-theme="light"] .mini-tools #routeTogg
  <div class="cg-gps-privacy">Test while parked. Recording starts only when tapped. FULL export contains your exact location, route and road coordinates; nothing is uploaded automatically.</div>
  <div class="cg-gps-actions"><button id="cgGpsDebugStart" type="button">Start recording</button><button id="cgGpsDebugSummary" type="button">Copy summary</button><button id="cgGpsDebugCopy" type="button">Copy FULL GPS log</button></div>
  <div id="cgGpsDebugStatus" aria-live="polite"></div><pre id="cgGpsDebugDetails"></pre>
-</section><div class="cg-hud-footer-logo" aria-label="Smoker’s Map"><span class="cg-hud-footer-shield"><svg width="25" height="26" viewBox="0 0 25 26" role="img" aria-label="Smoker’s Map shield"><path d="M12.5 1 L23 5.6 V13.1 C23 19.2 18.6 23.3 12.5 25 C6.4 23.3 2 19.2 2 13.1 V5.6 Z" fill="#62AAE5"/><path d="M12.5 6.4 L18.5 19.1 L12.5 15.8 L6.5 19.1 Z" fill="#040521"/></svg></span><span><strong>Smoker’s</strong><small>MAP</small></span></div><canvas id="road3d" aria-label="Live heading-up 3D navigation map with fixed scooter"></canvas><div id="mini3d" aria-label="Borderless aerial heading-up mini map, rider centred, surrounding real roads"><canvas id="miniMapLayer" aria-hidden="true"></canvas><canvas id="miniArrowLayer" aria-label="Current location arrow"></canvas></div><div class="mini-tools"><span> AERIAL · HEADING ↑</span><button id="routeToggle" type="button">ROUTE</button></div><div class="roadname"><small>CURRENT ROAD</small><strong>Waiting for road</strong></div><div class="speedlimit" id="speedLimitSign" aria-label="Speed limit" hidden><span id="speedLimitValue">—</span><small>km/h</small></div><div class="speed" aria-label="Live speedometer"><div class="speed-dial"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="dial-track" cx="50" cy="50" r="45"/><circle class="dial-progress" cx="50" cy="50" r="45"/><circle class="dial-inner" cx="50" cy="50" r="36"/></svg><div class="speed-readout"><strong id="speed">—</strong><span>km/h</span><small>SPEED</small></div></div></div><div class="heading" aria-label="Live heading"><div class="heading-label">HEADING ↗</div><strong>—</strong><em>WAITING FOR GPS</em></div><button id="camResetBtn" type="button" aria-label="Reset 3D view" hidden>RESET VIEW</button>
+</section><div class="cg-hud-footer-logo" aria-label="Smoker’s Map"><span class="cg-hud-footer-shield"><svg width="25" height="26" viewBox="0 0 25 26" role="img" aria-label="Smoker’s Map shield"><path d="M12.5 1 L23 5.6 V13.1 C23 19.2 18.6 23.3 12.5 25 C6.4 23.3 2 19.2 2 13.1 V5.6 Z" fill="#62AAE5"/><path d="M12.5 6.4 L18.5 19.1 L12.5 15.8 L6.5 19.1 Z" fill="#040521"/></svg></span><span><strong>Smoker’s</strong><small>MAP</small></span></div><canvas id="road3d" aria-label="Live heading-up 3D navigation map with fixed scooter"></canvas><div id="mini3d" aria-label="Borderless aerial heading-up mini map, rider centred, surrounding real roads"><canvas id="miniMapLayer" aria-hidden="true"></canvas><canvas id="miniArrowLayer" aria-label="Current location arrow"></canvas></div><div class="mini-tools"><span> AERIAL · HEADING ↑</span><button id="routeToggle" type="button">ROUTE</button></div><div class="roadname"><small>CURRENT ROAD</small><strong>Waiting for road</strong></div><div class="speedlimit" id="speedLimitSign" aria-label="Speed limit" hidden><span id="speedLimitValue">—</span><small>km/h</small></div><div class="speed" aria-label="Live speedometer"><div class="speed-dial"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="dial-track" cx="50" cy="50" r="45"/><circle class="dial-progress" cx="50" cy="50" r="45"/><circle class="dial-inner" cx="50" cy="50" r="36"/></svg><div class="speed-readout"><strong id="speed">—</strong><span>km/h</span><small>SPEED</small></div></div></div><button id="camResetBtn" type="button" aria-label="Reset 3D view" hidden>RESET VIEW</button>
 <div class="scooter" id="scooterModel" aria-label="Real-time 3D scooter and rider"><canvas id="scooter3d" aria-label="Three-dimensional scooter and rider rendered with WebGL"></canvas><div id="renderStatus" class="render-status">Starting 3D engine…</div></div>
 <div class="warning"><div class="main"><div class="camicon"><svg viewBox="0 0 32 32"><rect x="5" y="8" width="22" height="14" rx="2" fill="#26313a"/><circle cx="12" cy="15" r="3" fill="#dbe5eb"/><rect x="19" y="12" width="5" height="5" rx="1" fill="#dbe5eb"/><path d="M16 22v7m-5 0 5-4 5 4" stroke="#26313a" stroke-width="2"/></svg></div><div><small>SPEED CAMERA</small><strong id="distance">—</strong></div></div><div class="track"><i></i></div></div>
 <section class="modal" id="modal"><button onclick="document.getElementById('modal').classList.remove('show')">Close</button><strong id="modalTitle">Demo</strong><p>Live CameraGuard HUD.</p></section></main><script>function show(name){document.getElementById('modalTitle').textContent=name+' · Demo';document.getElementById('modal').classList.add('show')}</script><script>
@@ -395,7 +396,8 @@ window.CameraGuardUpdate=function(d){
  document.querySelector('.roadname strong').textContent=d.road||'ROAD UNAVAILABLE';
  const limitSign=document.getElementById('speedLimitSign'),limitOk=Number.isFinite(Number(d.speedLimitKmh))&&d.speedLimitKmh>0;
  limitSign.hidden=!limitOk;if(limitOk)document.getElementById('speedLimitValue').textContent=Math.round(Number(d.speedLimitKmh));
- const bearing=Number(d.heading);const headingOk=Boolean(d.hasBearing)&&Number.isFinite(bearing);const degrees=((Math.round(bearing)%360)+360)%360;const directions=['N','NE','E','SE','S','SW','W','NW'];const headingCard=document.querySelector('.heading');headingCard.querySelector('strong').textContent=headingOk?degrees+'°':'—';headingCard.querySelector('em').textContent=headingOk?directions[Math.round(degrees/45)%8]:'NO HEADING';
+ // The HEADING card was removed from the HUD (speedometer moved into its top-right slot
+ // instead - see the CSS for .hud>.speed) so there is no longer an element to update here.
  const warning=document.querySelector('.warning');warning.style.display=d.warning&&!d.nativeWarningOverlay?'block':'none';miniCanvas.classList.toggle('cg-warning-active',Boolean(d.warning));document.querySelector('.hud').classList.toggle('cg-native-warning-active',Boolean(d.warning));
  if(d.warning){warning.querySelector('.main small').textContent=d.warning.type;document.getElementById('distance').textContent=Math.round(d.warning.distance)+' m'}
  document.querySelector('.dial-progress').style.strokeDasharray=(Math.min(1,Math.max(0,d.speed/160))*283)+' 283';
@@ -436,12 +438,21 @@ for(const z of [-.86,.86]){const tire=mesh(new THREE.TorusGeometry(.39,.135,16,4
 box(black,0,.69,.36,.54,.15,1.55);ball(paint,0,1.02,.48,.53,.34,.79);ball(shell,0,1.17,.91,.58,.29,.31);ball(paint,0,1.23,1.13,.48,.2,.15);
 // Sculpted rear body and flared side panels.
 for(const side of [-1,1]){ball(paint,side*.42,1.08,.79,.19,.24,.49);ball(shell,side*.39,.89,1.04,.14,.13,.22);box(silver,side*.47,1.04,1.12,.11,.055,.19)}
-box(black,0,.88,1.23,.37,.24,.13);box(white,0,.96,1.312,.30,.105,.022);box(red,0,1.37,1.285,.42,.13,.065);for(const side of [-1,1])box(silver,side*.4,1.34,1.28,.12,.06,.04);
+// Tail-light cluster pulled in onto the fender itself (was z=1.285-1.312 at y up to 1.37,
+// well past the fender's own z=1.165-1.295/y=.76-1.00 - from a side angle that put the
+// glowing red lamp floating in mid-air behind the bodywork instead of mounted on it).
+box(black,0,.88,1.1,.37,.24,.13);box(white,0,.96,1.175,.30,.105,.022);box(red,0,1.06,1.155,.42,.13,.065);for(const side of [-1,1])box(silver,side*.4,1.05,1.15,.12,.06,.04);
 // Seat, steering, mirror stalks and real mirror geometry.
 ball(black,0,1.47,.15,.36,.12,.64);rod(silver,[-.25,1.64,-.45],[.25,1.64,-.45],.035);for(const side of [-1,1]){rod(silver,[side*.27,1.64,-.45],[side*.75,2.05,-.48],.022);ball(black,side*.79,2.08,-.48,.20,.11,.07);ball(silver,side*.79,2.08,-.54,.16,.07,.02)}
 // Rider torso, backpack, shoulders, legs, arms and gloves.
 ball(textile,0,2.24,.10,.45,.65,.30);ball(textile2,0,2.25,.38,.32,.47,.16);box(black,0,2.15,.54,.30,.08,.045);
-for(const side of [-1,1]){ball(textile,side*.29,2.53,.11,.20,.22,.20);rod(textile,[side*.35,2.46,.08],[side*.54,1.94,-.19],.12,.095);rod(textile,[side*.54,1.94,-.19],[side*.30,1.68,-.47],.105,.075);ball(black,side*.30,1.68,-.47,.10,.09,.10);rod(textile,[side*.25,1.84,.21],[side*.43,1.17,.12],.16,.12);rod(textile,[side*.43,1.17,.12],[side*.43,.77,.60],.14,.11);ball(black,side*.44,.72,.66,.16,.11,.24);rod(black,[side*.24,2.65,.32],[side*.25,1.96,.43],.025)}
+// Legs were previously tucked inside x=.30-.44, entirely inside the main body ellipsoid's
+// .53 half-width (line above) - from behind/the side they were fully occluded by the body,
+// so the rider looked like a legless torso balanced on the scooter rather than someone
+// actually riding it with feet on the footboard. Knee/shin/foot are pushed outward past the
+// body's silhouette (to .52/.55/.58) so they read as visible legs; the hip/thigh start stays
+// close to the seat, matching a real riding posture.
+for(const side of [-1,1]){ball(textile,side*.29,2.53,.11,.20,.22,.20);rod(textile,[side*.35,2.46,.08],[side*.54,1.94,-.19],.12,.095);rod(textile,[side*.54,1.94,-.19],[side*.30,1.68,-.47],.105,.075);ball(black,side*.30,1.68,-.47,.10,.09,.10);rod(textile,[side*.25,1.84,.21],[side*.52,1.17,.16],.16,.12);rod(textile,[side*.52,1.17,.16],[side*.55,.75,.58],.14,.11);ball(black,side*.58,.70,.64,.16,.11,.24);rod(black,[side*.24,2.65,.32],[side*.25,1.96,.43],.025)}
 // Helmet: a solid shell with raised ridge, rear ventilation, dark lower trim and visor wrap.
 ball(white,0,3.05,.09,.31,.35,.32);ball(visor,0,2.94,.34,.28,.12,.07);ball(black,0,2.83,.12,.29,.07,.27);ball(silver,0,3.37,.06,.12,.025,.17);for(const side of [-1,1])ball(black,side*.22,3.09,.23,.045,.07,.045);
 // Fine hardware and license holder.
@@ -458,6 +469,16 @@ for(const side of [-1,1]){
  turnLightMats[side===1?'right':'left']=turnMat;
 }
 for(let i=0;i<12;i++){const a=i*Math.PI/6;const t=box(black,0,.49+Math.sin(a)*.39,1.02+Math.cos(a)*.39,.21,.032,.045);t.rotation.x=-a}
+// Front-end completeness pass: the nose previously had a bare front wheel with no fender,
+// headlight or fork connecting it to the handlebar (everything sculpted above was
+// concentrated around the seat/rear wheel) - from a side angle it read as an unfinished
+// vehicle. This mirrors the existing rear fender/tail-light treatment at the front instead.
+const headlamp=new THREE.MeshPhysicalMaterial({color:0xfff6d8,emissive:0xffe9a8,emissiveIntensity:2.1,roughness:.16,clearcoat:1});
+box(black,0,.88,-1.02,.37,.24,.13);
+ball(headlamp,0,1.05,-1.08,.19,.15,.09);
+box(silver,0,1.05,-1.145,.20,.16,.02);
+box(black,0,1.28,-.62,.30,.16,.10);
+for(const side of [-1,1])rod(silver,[side*.22,1.62,-.45],[side*.16,.62,-.82],.05,.03);
 const roadCanvas=document.getElementById('road3d');
 function makeRenderer(c){const r=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:true,powerPreference:'high-performance'});r.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7));r.outputColorSpace=THREE.SRGBColorSpace;r.toneMapping=THREE.ACESFilmicToneMapping;r.toneMappingExposure=1.75;return r}
 const roadRenderer=makeRenderer(roadCanvas),roadScene=new THREE.Scene();roadScene.background=new THREE.Color(0x0D2A5C);roadScene.fog=new THREE.FogExp2(0x12376F,.0018);

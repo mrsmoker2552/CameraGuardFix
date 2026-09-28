@@ -1036,7 +1036,13 @@ private fun NavigationScreen(modifier: Modifier, liveLocation: Location?, filter
         // "CameraGuard / ROUTE" title header further below is a full-width Column with its
         // own gradient background, declared after this chip - without an explicit zIndex it
         // paints on top and visually buries the temperature card whenever fullMap is true.
-        WeatherChip(currentWeather, Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 10.dp).zIndex(5f))
+        // Positioned below the cockpit bar rather than at plain TopEnd: the cockpit Surface
+        // above (shown when !fullMap) is also full-width/top-aligned with the compass ring at
+        // its right edge, so a TopEnd weather chip used to land directly on top of the compass.
+        // cockpitHeight plus the cockpit Surface's own 10dp+10dp vertical padding clears it
+        // with room to spare. The fullMap title header is a much slimmer two-line Column, so
+        // the original top offset is kept there.
+        WeatherChip(currentWeather, Modifier.align(Alignment.TopEnd).padding(top = (if (!fullMap) cockpitHeight + 38.dp else 12.dp), end = 10.dp).zIndex(5f))
 
         if (fullMap) {
             Column(Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 237.dp),

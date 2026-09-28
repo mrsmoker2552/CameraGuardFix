@@ -1335,21 +1335,21 @@ class MainActivity : ComponentActivity() {
         val name = appSettings.communityDisplayName.trim().take(40)
         if (name.isBlank()) return
 
-        // Free-only avatar: only ever the URL Google already hosts for this account's
-        // photo, never anything CameraGuard uploads or stores itself. See the doc
-        // comment on CommunityRider.photoUrl for why this is free.
-        val googlePhotoUrl =
-            if (!selfUser.isAnonymous && selfUser.providerData.any { it.providerId == "google.com" }) {
-                selfUser.photoUrl?.toString()
-            } else {
-                null
-            }
-
-        val profile = mutableMapOf<String, Any>(
+        // NOTE: this intentionally does NOT write a "photoUrl" field (an earlier change
+        // added one - see CommunityRider.photoUrl / firebase-rules/realtime-database.rules.json).
+        // The realtime-database.rules.json schema for users/$uid is a strict allowlist
+        // ("$other": {".validate": false}); the updated schema that permits "photoUrl" is
+        // a rules-file change that must be deployed separately via the Firebase Console/CLI
+        // (this repo's CI does not deploy database rules) and cannot be confirmed deployed
+        // from here. Until that deploy is confirmed, adding an undeclared field to this
+        // write makes the ENTIRE write fail Firebase's server-side validation - silently, for
+        // every Google-linked rider - which stops presence/community-enabled state from ever
+        // reaching the database. That is what caused "online riders" to disappear for
+        // everyone. Reverted to the fields the currently-deployed rules definitely allow.
+        val profile = mapOf<String, Any>(
             "displayName" to name,
             "communityEnabled" to enabled
         )
-        if (googlePhotoUrl != null) profile["photoUrl"] = googlePhotoUrl
 
         communityDatabase.reference
             .child("users")
@@ -1417,17 +1417,10 @@ class MainActivity : ComponentActivity() {
         // still not the raw GPS fix, but close enough for another rider's marker to be useful.
         val coarseLat = (floor(location.latitude / COMMUNITY_DISPLAY_PRECISION_DEGREES) + 0.5) * COMMUNITY_DISPLAY_PRECISION_DEGREES
         val coarseLon = (floor(location.longitude / COMMUNITY_DISPLAY_PRECISION_DEGREES) + 0.5) * COMMUNITY_DISPLAY_PRECISION_DEGREES
-        // Free-only avatar: republishes the Google-hosted account photo URL only - see
-        // CommunityRider.photoUrl doc comment and writeCommunityProfile() above.
-        val selfUserForPhoto = FirebaseAuth.getInstance().currentUser
-        val presenceGooglePhotoUrl =
-            if (selfUserForPhoto != null && !selfUserForPhoto.isAnonymous &&
-                selfUserForPhoto.providerData.any { it.providerId == "google.com" }
-            ) {
-                selfUserForPhoto.photoUrl?.toString()
-            } else {
-                null
-            }
+        // NOTE: does not write "photoUrl" here - see the matching note in
+        // writeCommunityProfile() above (an undeclared field fails the whole write against
+        // the currently-deployed RTDB rules, which is what made every rider's presence
+        // silently stop publishing).
         val presence = hashMapOf<String, Any>(
             "displayName" to appSettings.communityDisplayName.trim().take(40),
             "latitude" to coarseLat,
@@ -1444,7 +1437,6 @@ class MainActivity : ComponentActivity() {
             "cell" to cell,
             "lastSeen" to ServerValue.TIMESTAMP
         )
-        if (presenceGooglePhotoUrl != null) presence["photoUrl"] = presenceGooglePhotoUrl
         // Never publish exact coordinates to /presence.
         val privatePresence = mapOf<String, Any>(
             "latitude" to location.latitude,
