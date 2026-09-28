@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -374,6 +375,63 @@ fun CameraGuardApp(
     fun updateVisibleCameraTypes(types: Set<RealCameraType>) {
         visibleCameraTypes = types
         cameraMapFilterStore.save(types)
+    }
+
+    // Single authoritative background rerouting for the whole app. This used to live inside
+    // NavigationScreen and only ran while a fullMap instance of it happened to be composed -
+    // i.e. only while the Route tab's own full-screen navigation view was actually on screen -
+    // so switching to the Map tab or the HUD while navigating silently stopped automatic
+    // rerouting entirely (the rider would have had to switch back to Route to get a reroute at
+    // all). Hoisting it here means it keeps running for as long as a route is active, no matter
+    // which tab is currently visible, and both the Route tab and the HUD - which each read
+    // NavigationRouteRuntime.route/​revision directly - pick up the result the moment it lands.
+    val routePreferencesStore = remember(appContext) { RoutePreferencesStore(appContext) }
+    val latestNavLocation by rememberUpdatedState(liveLocation)
+    LaunchedEffect(Unit) {
+        var offRouteSamples = 0
+        var lastRerouteAttempt = 0L
+        var trackedRoute: com.boss.cameraguard.data.NavigationRoute? = null
+        while (true) {
+            kotlinx.coroutines.delay(700)
+            val current = NavigationRouteRuntime.route?.takeIf { it.active }
+            if (current !== trackedRoute) {
+                // A different route object (freshly started, or just rerouted) - reset the
+                // consecutive-sample counter and the cooldown so a stale count from the
+                // previous route can never carry over and trigger an immediate re-reroute.
+                trackedRoute = current; offRouteSamples = 0
+            }
+            if (current == null) continue
+            val loc = latestNavLocation ?: continue
+            val fresh = (android.os.SystemClock.elapsedRealtimeNanos() - loc.elapsedRealtimeNanos) in 0L..15_000_000_000L
+            // Distinguishing genuine deviation from GPS noise/lane-level offset: requires a
+            // fresh, reasonably accurate, MOVING fix more than 55m from the route line (a
+            // parked/poor-GPS reading sitting far from the line is noise, not "took another
+            // road"), confirmed on 3 consecutive 700ms samples (~2.1s) before reacting at all.
+            val genuinelyOffRoute = fresh && loc.hasAccuracy() && loc.accuracy <= 35f &&
+                loc.hasSpeed() && loc.speed >= 1.0f && distanceFromRouteMeters(loc, current.points) > 55f
+            offRouteSamples = if (genuinelyOffRoute) offRouteSamples + 1 else 0
+            if (offRouteSamples < 3) continue
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (now - lastRerouteAttempt < 2500L) continue
+            lastRerouteAttempt = now
+            try {
+                // Always recalculates FROM the rider's live position TO the same destination -
+                // never back toward the old route - so a genuinely shorter/faster road the rider
+                // took is accepted rather than fought.
+                val recalculated = withContext(Dispatchers.IO) {
+                    RoutePlannerRepository.route(loc,
+                        RoutePlannerRepository.Place(current.destinationName, current.destinationLat, current.destinationLon),
+                        routePreferencesStore.load())
+                }
+                // Ignore a stale result if the authoritative route already moved on (a newer
+                // reroute landed first, the destination changed, navigation was stopped, etc).
+                if (NavigationRouteRuntime.route === current) {
+                    NavigationRouteRuntime.updateRoute(recalculated.copy(active = true))
+                }
+            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { /* Keep current route; retry after the next off-route confirmation. */ }
+            offRouteSamples = 0
+        }
     }
 
     // Rider Community Chat - identity comes from the existing auth session (guest or linked
@@ -902,32 +960,20 @@ private fun NavigationScreen(modifier: Modifier, liveLocation: Location?, filter
 
     // GPS updates must not continually cancel the reroute debounce.
     val latestLocation by rememberUpdatedState(liveLocation)
-    val latestPreferences by rememberUpdatedState(routePreferences)
-    LaunchedEffect(route?.active) {
-        if (!fullMap) return@LaunchedEffect
-        var offRouteSamples = 0
-        var lastRerouteAttempt = 0L
-        while (NavigationRouteRuntime.route?.active == true) {
-            kotlinx.coroutines.delay(1500)
-            val loc = latestLocation ?: continue
-            val current = NavigationRouteRuntime.route?.takeIf { it.active } ?: break
-            val fresh = (android.os.SystemClock.elapsedRealtimeNanos() - loc.elapsedRealtimeNanos) in 0L..15_000_000_000L
-            offRouteSamples = if (fresh && loc.hasAccuracy() && loc.accuracy <= 35f && distanceFromRouteMeters(loc, current.points) > 55f) offRouteSamples + 1 else 0
-            if (offRouteSamples < 2) continue
-            val now = android.os.SystemClock.elapsedRealtime()
-            if (now - lastRerouteAttempt < 4000L) continue
-            lastRerouteAttempt = now
-            try {
-                val recalculated = withContext(Dispatchers.IO) {
-                    RoutePlannerRepository.route(loc, RoutePlannerRepository.Place(current.destinationName, current.destinationLat, current.destinationLon), latestPreferences)
-                }
-                if (NavigationRouteRuntime.route === current) {
-                    NavigationRouteRuntime.updateRoute(recalculated.copy(active = true))
-                    routeRevision = NavigationRouteRuntime.revision
-                }
-            } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-            catch (_: Exception) { /* Keep current route; retry after cooldown. */ }
-            offRouteSamples = 0
+    // Automatic off-route detection/rerouting now runs once, app-wide, in CameraGuardApp -
+    // see the comment there for why (it used to live here, gated behind fullMap, and silently
+    // stopped the moment the rider switched away from this screen). This screen only needs to
+    // notice when that shared reroute has landed; see the routeRevision poller just below.
+    // Catches a reroute (or any other route/clear) made from OUTSIDE this screen - e.g. the
+    // app-wide automatic-reroute watcher in CameraGuardApp - promptly, instead of only on the
+    // next self-triggered write to the local routeRevision. Matches the existing
+    // SpeakRouteGuidance polling idiom elsewhere in this file (NavigationRouteRuntime.revision
+    // is a plain volatile counter, not Compose state, so it has to be polled to react to writes
+    // made by a different composable).
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (routeRevision != NavigationRouteRuntime.revision) routeRevision = NavigationRouteRuntime.revision
+            kotlinx.coroutines.delay(400)
         }
     }
 
@@ -1414,25 +1460,54 @@ private fun NavigationScreen(modifier: Modifier, liveLocation: Location?, filter
                                 fontSize=8.sp, fontWeight=FontWeight.Bold, modifier=Modifier.padding(horizontal=10.dp, vertical=5.dp))
                         }
                     }
+                    // Fixed-center-arrow / rotating-ring compass, like a car dashboard heading dial:
+                    // the arrow never moves or rotates - it is the stable "forward" indicator - and
+                    // the tick ring turns underneath it to reflect the rider's real heading. A
+                    // continuously-unwrapped angle (rather than the raw 0-360 value) plus
+                    // shortest-path deltas avoid the ring whipping backwards through 360 degrees
+                    // when heading crosses north, and the last known angle is held - never reset to
+                    // 0 - whenever heading data is briefly unavailable.
+                    var ringContinuousDeg by remember { mutableFloatStateOf(0f) }
+                    var lastRawHeadingDeg by remember { mutableStateOf<Float?>(null) }
+                    LaunchedEffect(degrees) {
+                        val raw = degrees ?: return@LaunchedEffect
+                        val previous = lastRawHeadingDeg
+                        ringContinuousDeg += if (previous == null) 0f else (((raw - previous + 540f) % 360f) - 180f)
+                        if (previous == null) ringContinuousDeg = raw
+                        lastRawHeadingDeg = raw
+                    }
+                    val animatedRingDeg by animateFloatAsState(
+                        targetValue = ringContinuousDeg, animationSpec = tween(320, easing = LinearEasing), label = "compassRing"
+                    )
                     Box(Modifier.size(cockpitCompass), contentAlignment=Alignment.Center) {
                         Canvas(Modifier.fillMaxSize()) {
                             drawCircle(Color.Black.copy(alpha=.18f))
                             drawCircle(PremiumLine.copy(alpha=.72f), style=Stroke(2.dp.toPx()))
                             drawCircle(CyanGlow.copy(alpha=.10f), radius=size.minDimension*.38f, style=Stroke(1.dp.toPx()))
-                            for(i in 0 until 12) {
-                                val a=Math.toRadians((i*30-90).toDouble()); val c=center
-                                val outer=size.minDimension*.47f; val inner=outer-if(i%3==0) 7.dp.toPx() else 4.dp.toPx()
-                                drawLine(if(i%3==0) CyanGlow.copy(alpha=.65f) else PremiumLine,
-                                    Offset(c.x+cos(a).toFloat()*inner,c.y+sin(a).toFloat()*inner),
-                                    Offset(c.x+cos(a).toFloat()*outer,c.y+sin(a).toFloat()*outer),1.dp.toPx())
+                            // The ring (tick marks) rotates opposite the heading so the bright
+                            // "north" tick sweeps to wherever true north currently sits relative to
+                            // the fixed forward arrow - the arrow itself is drawn outside this
+                            // rotated scope further below, so it never moves or spins with it.
+                            rotate(-animatedRingDeg, pivot = center) {
+                                for(i in 0 until 12) {
+                                    val a=Math.toRadians((i*30-90).toDouble()); val c=center
+                                    val outer=size.minDimension*.47f; val inner=outer-if(i%3==0) 7.dp.toPx() else 4.dp.toPx()
+                                    drawLine(if(i%3==0) CyanGlow.copy(alpha=.65f) else PremiumLine,
+                                        Offset(c.x+cos(a).toFloat()*inner,c.y+sin(a).toFloat()*inner),
+                                        Offset(c.x+cos(a).toFloat()*outer,c.y+sin(a).toFloat()*outer),1.dp.toPx())
+                                }
                             }
                         }
-                        Column(horizontalAlignment=Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Navigation,null,tint=if(moving) CyanGlow else TextSecondary,
-                                modifier=Modifier.size(23.dp).rotate(degrees ?: 0f))
-                            Text(compass ?: "—",color=Color.White,fontWeight=FontWeight.ExtraBold,fontSize=14.sp)
-                            Text(if(moving) "${degrees!!.roundToInt()%360}°" else "Stationary",color=TextSecondary,fontSize=7.sp)
-                        }
+                        // Pixel-perfect centered, permanently fixed forward arrow - no .rotate(),
+                        // no sibling composables sharing this alignment slot, so it can never drift
+                        // off-center the way a taller stacked Column (icon+labels) previously did.
+                        Icon(Icons.Default.Navigation, null, tint = if (moving) CyanGlow else TextSecondary,
+                            modifier = Modifier.size(23.dp).align(Alignment.Center))
+                        Text(
+                            if (moving) "${compass ?: "—"} · ${degrees!!.roundToInt()%360}°" else "Stationary",
+                            color = TextSecondary, fontSize = 7.sp, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = if (compactMap) 3.dp else 6.dp)
+                        )
                     }
                 }
             }

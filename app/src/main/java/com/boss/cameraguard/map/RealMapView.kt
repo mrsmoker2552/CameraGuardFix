@@ -229,16 +229,23 @@ fun RealMapView(
         if (location != null && followMode) {
             val last = lastFollowLocation[0]
             val firstFix = force || !wasFollowing[0] || last == null
-            // Stationary GPS jitter must not repeatedly recenter the map, and a new
-            // GPS sample must not restart an unfinished camera animation.
+            // Stationary GPS jitter must not repeatedly recenter the map (a few metres of
+            // noise while parked should never shake the camera), but a genuine GPS fix while
+            // riding must recenter promptly - the old design gated this behind a large 850ms
+            // + >=5m/>=8deg threshold, so the on-map marker (updated on every fix, unthrottled)
+            // visibly drifted away from the stale camera centre between recenters, especially
+            // at speed. Recentering on essentially every fix while moving keeps the rider's
+            // marker pinned to the visual centre - "map moves under a fixed arrow" - the way a
+            // turn-by-turn nav app does, while a short per-fix throttle (matched to a ~1Hz GPS
+            // rate) still stops redundant camera churn if fixes ever arrive faster than that.
             val moving = location.hasSpeed() && location.speed >= 1.5f
-            val headingChanged = last != null && moving && location.hasBearing() &&
-                kotlin.math.abs(((location.bearing - last.bearing + 540f) % 360f) - 180f) >= 8f
-            val minimumMovementMeters = maxOf(5f,
-                if (location.hasAccuracy()) location.accuracy * 1.5f else 5f)
-            val moved = last != null && moving && location.distanceTo(last) >= minimumMovementMeters
+            val minimumMovementMeters = if (location.hasAccuracy()) (location.accuracy * 0.6f).coerceIn(1.5f, 4f) else 2f
+            val moved = last == null || location.distanceTo(last) >= minimumMovementMeters
+            val headingChanged = last != null && location.hasBearing() && last.hasBearing() &&
+                kotlin.math.abs(((location.bearing - last.bearing + 540f) % 360f) - 180f) >= 3f
             val now = android.os.SystemClock.uptimeMillis()
-            if (firstFix || ((moved || headingChanged) && now - lastFollowUpdateMillis[0] >= 850L)) {
+            val dueForUpdate = now - lastFollowUpdateMillis[0] >= 260L
+            if (firstFix || (moving && (moved || headingChanged) && dueForUpdate)) {
                 // Initial framing sets default zoom; all later follow updates retain
                 // the zoom and tilt chosen by the user instead of jumping to 18.2.
                 moveToCurrentLocation(map, location, animated = !firstFix,
@@ -833,7 +840,10 @@ private fun moveToCurrentLocation(
         .bearing(heading)
         .tilt(if (miniMapMode) 0.0 else if (resetFraming) 48.0 else map.cameraPosition.tilt)
         .build()
-    if (animated) map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 650)
+    // Matched to the ~260ms follow throttle above (was 650ms): a shorter animation keeps the
+    // camera caught up with frequent recenters instead of several animations queuing up and
+    // the map visibly lagging behind the live position.
+    if (animated) map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 400)
     else map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
 }
 
