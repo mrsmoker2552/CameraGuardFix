@@ -1113,7 +1113,7 @@ private fun NavigationScreen(modifier: Modifier, liveLocation: Location?, filter
                 onClick = { showRouteEditor = !showRouteEditor; showMapSettings = false; onlineRidersExpanded = false; reportMenuExpanded = false },
                 modifier = Modifier.widthIn(min = 118.dp, max = 154.dp).height(42.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = CameraGuardPalette.Accent, contentColor = AppBackground),
+                colors = ButtonDefaults.buttonColors(containerColor = CameraGuardPalette.Accent, contentColor = CameraGuardPalette.OnAccent),
                 shape = RoundedCornerShape(13.dp)
             ) {
                 Icon(Icons.Default.Route, null, Modifier.size(18.dp)); Spacer(Modifier.width(7.dp)); Text(if (showRouteEditor) "CLOSE" else "SET ROUTE", fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -2879,7 +2879,7 @@ private fun CameraListScreen(
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = { showAddDialog = true }, enabled = liveLocation != null,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PremiumAccent, contentColor = AppBackground)) {
+                        colors = ButtonDefaults.buttonColors(containerColor = PremiumAccent, contentColor = CameraGuardPalette.OnAccent)) {
                         Icon(Icons.Default.AddLocationAlt, null, Modifier.size(19.dp))
                         Spacer(Modifier.width(9.dp))
                         Text("Add camera at my location", fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -4707,7 +4707,7 @@ private fun RealCameraType.premiumAccent(): Color = when (this) {
     RealCameraType.ZTL -> Color(0xFFF3AE72)
     RealCameraType.AVERAGE_SPEED -> CameraGuardPalette.Accent
     RealCameraType.MOBILE_PHONE -> Color(0xFFF39ADA)
-    RealCameraType.OTHER_ENFORCEMENT -> Color(0xFFAABCCD)
+    RealCameraType.OTHER_ENFORCEMENT -> Color(0xFFC7C2B4)
 }
 
 private fun RealCameraType.premiumIcon(): ImageVector = when (this) {
@@ -5330,7 +5330,7 @@ private fun SmokerMapWordmark(modifier: Modifier = Modifier) {
             contentAlignment = Alignment.Center
         ) {
             Icon(Icons.Default.Shield, contentDescription = null, tint = CyanGlow, modifier = Modifier.fillMaxSize())
-            Icon(Icons.Default.Navigation, contentDescription = null, tint = Color(0xFF08111D), modifier = Modifier.size(12.dp))
+            Icon(Icons.Default.Navigation, contentDescription = null, tint = CameraGuardPalette.OnAccent, modifier = Modifier.size(12.dp))
         }
         Spacer(Modifier.width(4.dp))
         Column {

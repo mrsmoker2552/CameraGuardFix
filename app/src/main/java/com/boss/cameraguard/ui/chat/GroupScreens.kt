@@ -97,7 +97,7 @@ fun CreateGroupScreen(
                 },
                 enabled = !creating,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = CameraGuardPalette.Accent, contentColor = CameraGuardPalette.Background)
+                colors = ButtonDefaults.buttonColors(containerColor = CameraGuardPalette.Accent, contentColor = CameraGuardPalette.OnAccent)
             ) {
                 if (creating) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = CameraGuardPalette.Background)
                 else Text("Create group (${selected.size + 1} members)", fontWeight = FontWeight.Bold)
@@ -237,7 +237,7 @@ private fun AddMembersSheet(communityRiders: List<CommunityRider>, onDismiss: ()
                 Button(
                     onClick = { onAdd(selected.toSet()) }, enabled = selected.isNotEmpty(),
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CameraGuardPalette.Accent, contentColor = CameraGuardPalette.Background)
+                    colors = ButtonDefaults.buttonColors(containerColor = CameraGuardPalette.Accent, contentColor = CameraGuardPalette.OnAccent)
                 ) { Text("Add ${selected.size} rider(s)") }
             }
         }

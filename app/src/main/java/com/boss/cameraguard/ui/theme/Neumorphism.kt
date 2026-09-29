@@ -29,8 +29,8 @@ import androidx.compose.ui.unit.dp
  * drawn by hand with a blurred native Paint and composited behind (raised) or clipped inside
  * (inset/pressed) the surface.
  *
- * Colours are derived from CameraGuardPalette, so the locked signature palette (navy background /
- * deep-blue surface / sky-blue accent / amber highlight) is unchanged - only the shadow and shape
+ * Colours are derived from CameraGuardPalette, so the locked signature palette (black/graphite
+ * background and surfaces / warm golden-yellow accent) is unchanged - only the shadow and shape
  * language changes to match a soft-UI reference. Safety-critical warning colours are untouched;
  * callers may still borrow this shape/depth treatment for them.
  */
@@ -60,7 +60,7 @@ fun Modifier.neumorphicRaised(
     borderAlpha: Float = 0.22f
 ): Modifier {
     val dark = CameraGuardPalette.isDark
-    val darkShadow = if (dark) Color.Black.copy(alpha = 0.50f) else Color(0xFF8CA3BA).copy(alpha = 0.34f)
+    val darkShadow = if (dark) Color.Black.copy(alpha = 0.50f) else Color(0xFF8A8272).copy(alpha = 0.34f)
     val lightShadow = if (dark) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.95f)
     val blur = elevation * 1.3f
     val travel = elevation * 0.55f
@@ -80,7 +80,7 @@ fun Modifier.neumorphicInset(
     borderAlpha: Float = 0.26f
 ): Modifier {
     val dark = CameraGuardPalette.isDark
-    val darkShadow = if (dark) Color.Black.copy(alpha = 0.46f) else Color(0xFF8CA3BA).copy(alpha = 0.30f)
+    val darkShadow = if (dark) Color.Black.copy(alpha = 0.46f) else Color(0xFF8A8272).copy(alpha = 0.30f)
     val lightShadow = if (dark) Color.White.copy(alpha = 0.04f) else Color.White.copy(alpha = 0.85f)
     val blur = 7.dp
     val travel = 4.dp

@@ -262,7 +262,7 @@ private fun CommunityJoinScreen(modifier: Modifier, googleLinked: Boolean, busy:
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth().height(52.dp).shadow(10.dp, RoundedCornerShape(20.dp), clip = false),
                     shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CameraGuardPalette.Accent, contentColor = CameraGuardPalette.Background)
+                    colors = ButtonDefaults.buttonColors(containerColor = CameraGuardPalette.Accent, contentColor = CameraGuardPalette.OnAccent)
                 ) {
                     if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
                     else Text(if (googleLinked) "Join Community" else "Continue with Google")

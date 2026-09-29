@@ -95,7 +95,7 @@ fun ConversationListScreen(
                     modifier = Modifier.shadow(9.dp, RoundedCornerShape(16.dp), clip = false),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = CameraGuardPalette.Accent,
-                        contentColor = CameraGuardPalette.Background
+                        contentColor = CameraGuardPalette.OnAccent
                     )
                 ) { Icon(Icons.Default.Add, contentDescription = "New conversation") }
             }
